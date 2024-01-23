@@ -2,7 +2,7 @@
 
 
 # import CNN
-from visual_6 import CNN_128x128
+from CNN_128x128 import CNN_128x128
 
 # Libraries
 import os
@@ -24,7 +24,11 @@ from utils import CustomDataset, compute_metrics, plot_weights, visTensor
 
 import os
 
+
+
 if __name__ == "__main__":
+
+    ### 1 - DATA LOADING
 
     path_train = "./data/train/"
     path_test = "./data/test/"
@@ -68,7 +72,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print('Device: ', device)
 
-    IMAGE_SIZE = (28,28)
+    IMAGE_SIZE = (128,128)
 
     data_trasformation = Compose([
         ToPILImage(),
@@ -80,24 +84,115 @@ if __name__ == "__main__":
     train_dataset = CustomDataset(train_data, train_labels, data_trasformation)  # we use a custom dataset defined in utils.py file
     test_dataset = CustomDataset(test_data, test_labels, data_trasformation)  # we use a custom dataset defined in utils.py file
 
-    batch_size = 3
+    batch_size = 2
 
     trainset = DataLoader(train_dataset, batch_size=batch_size,
                           drop_last=True)  # construct the trainset with subjects divided in mini-batch
     testset = DataLoader(test_dataset, batch_size=batch_size,
                          drop_last=True)  # construct the testset with subjects divided in mini-batch
 
+    # 2 - TRAINING SETTINGS
 
-    for d in trainset:
-        data = d[0]
-        label = d[0]
+    best_acc = 0.0
+    num_epochs = 5  # number of epochs
+    lr = 0.001  # learning rate
+    n_classes = len(np.unique(train_labels))  # number of classes in the dataset
+    lab_classes = ['Muffin', 'Chihuahua']
 
-        sample = torch.tensor(data).permute(1,2,0).numpy()
-        plt.imshow(sample)
-        plt.show()
-        break
+    # Variables to store the resuts
+    losses = []
+    acc_train = []
+    pred_label_train = torch.empty((0))
+    true_label_train = torch.empty((0))
 
-        # 'paperino'
+    # Model
+    model = CNN_128x128(input_channel=3, num_classes=n_classes).to(device)
+
+    # Optimizer
+    optim = torch.optim.Adam(model.parameters(), lr=lr)  # to choose
+    # Loss function
+    criterion = torch.nn.CrossEntropyLoss()  # to choose
+
+
+    for epoch in range(num_epochs):
+        model.train()
+        for batch in trainset:
+
+            inputs = batch[0].to(device)
+            labels = batch[1].to(torch.long).to(device)
+
+            output = model(inputs)
+
+            loss = criterion(output,labels)
+
+            optim.zero_grad()
+            loss.backward()
+            optim.step()
+
+            output_cpu = output.detach().cpu().numpy()
+            labels_cpu = labels.detach().cpu().numpy()
+            pred_label_train = np.concatenate((pred_label_train, output_cpu.argmax(1)), axis=0)
+            true_label_train = np.concatenate((true_label_train, labels_cpu), axis=0)
+
+        losses.append(loss.cpu().detach().numpy())
+        acc_t = accuracy_score(true_label_train, pred_label_train)
+        acc_train.append(acc_t)
+        print(f'epoch : {epoch + 1}/{num_epochs}, loss = {loss} - acc = {acc_t}')
+        # print("  epoch : {}/{}, loss = {:.4f} - acc = {:.4f}".format(epoch + 1, num_epochs, loss, acc_t))
+        if acc_t > best_acc:  # save the best model (the highest accuracy in validation)
+            # save the best model in .pt format
+            # to do
+            best_acc = acc_t
+
+        # Reinitialize the variables to compute accuracy
+        pred_label_train = torch.empty((0))
+        true_label_train = torch.empty((0))
+
+    from datetime import datetime
+    date_time = datetime.now().strftime('%d-%m-%Y__%H-%M-%S-%f')[:-3]
+    models_trained_path = './models_trained/model'
+
+    torch.save(model.state_dict(), f'{models_trained_path}_{date_time}.pt')
+
+    # Plot the results
+    plt.figure(figsize=(8, 5))
+    plt.plot(list(range(num_epochs)), losses)
+    plt.title("Learning curve")
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.tight_layout()
+    plt.show()
+
+    plt.figure(figsize=(8, 5))
+    plt.plot(list(range(num_epochs)), acc_train)
+    plt.title("Accuracy curve")
+    plt.xlabel("Epochs")
+    plt.ylabel("Accuracy")
+    plt.tight_layout()
+    plt.show()
+
+
+    ### 3 - TESTING
+
+    # to use when model is saved
+    model_test = CNN_128x128(input_channel=3, num_classes=n_classes).to(device)  # Initialize a new model
+    model_test.load_state_dict(torch.load(f'{models_trained_path}_{date_time}.pt'))  # Load the model
+    # to use when model is saved
+
+    pred_label_test = torch.empty((0, n_classes)).to(device)
+    true_label_test = torch.empty((0)).to(device)
+
+    with torch.no_grad():
+        for data in testset:
+            X_te, y_te = data
+            X_te = X_te.view(batch_size, 3, 128, 128).float().to(device)
+            y_te = y_te.to(device)
+            output_test = model_test(X_te)
+            pred_label_test = torch.cat((pred_label_test, output_test), dim=0)
+            true_label_test = torch.cat((true_label_test, y_te), dim=0)
+
+    compute_metrics(y_true=true_label_test, y_pred=pred_label_test,
+                    lab_classes=lab_classes)  # function to compute the metrics (accuracy and confusion matrix)
 
 
 
