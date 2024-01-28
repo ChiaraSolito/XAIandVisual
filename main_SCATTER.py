@@ -1,40 +1,32 @@
-
-
-
-# import CNN
-from CNN_128x128 import CNN_128x128
-
 # Libraries
 import os
+from zipfile import ZipFile
 import glob
 import cv2
-import random
 import numpy as np
-import pandas as pd
 import torch
-import torch.nn.functional as F
-from torch.utils.data import DataLoader, Subset, Dataset
-from torchvision import datasets
-from torchvision.transforms import ToTensor, Compose, Resize, ToPILImage
+from torch.utils.data import DataLoader
+from kymatio.torch import Scattering2D
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 import matplotlib.pyplot as plt
 import seaborn as sns
-from utils import CustomDataset, compute_metrics, plot_weights, visTensor
+from utils import CustomDataset, compute_metrics
+from ScatNet import ScatNet2D
+from torchinfo import summary
 
-import os
+import random
+from torchvision.transforms import ToTensor, Compose, Resize, ToPILImage
 
 
-
-if __name__ == "__main__":
-
+def main():
     ### 1 - DATA LOADING
 
     path_train = "./data/train/"
     path_test = "./data/test/"
 
-    n_muffins_train = len(os.listdir(path_train + "muffin")) # 2174
-    n_muffins_test =  len(os.listdir(path_test + "muffin")) # 544
+    n_muffins_train = len(os.listdir(path_train + "muffin"))  # 2174
+    n_muffins_test = len(os.listdir(path_test + "muffin"))  # 544
     n_chihuahua_train = len(os.listdir(path_train + "chihuahua"))  # 2559
     n_chihuahua_test = len(os.listdir(path_test + "chihuahua"))  # 640
 
@@ -56,7 +48,6 @@ if __name__ == "__main__":
     test_data = [cv2.imread(file) for file in glob.glob('./data/test/muffin/*.jpg')]
     test_data.extend(cv2.imread(file) for file in glob.glob('./data/test/chihuahua/*.jpg'))
 
-
     # Random shuffle train and test set
     train_list = list(zip(train_data, train_labels))
     test_list = list(zip(test_data, test_labels))
@@ -67,12 +58,11 @@ if __name__ == "__main__":
     train_data, train_labels = zip(*train_list)
     test_data, test_labels = zip(*test_list)
 
-
     # Set device where to run the model. GPU if available, otherwise cpu (very slow with deep learning models)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print('Device: ', device)
 
-    IMAGE_SIZE = (128,128)
+    IMAGE_SIZE = (128, 128)
 
     data_trasformation = Compose([
         ToPILImage(),
@@ -81,8 +71,10 @@ if __name__ == "__main__":
     ])
 
     # Create Dataloader with batch size = 64
-    train_dataset = CustomDataset(train_data, train_labels, data_trasformation)  # we use a custom dataset defined in utils.py file
-    test_dataset = CustomDataset(test_data, test_labels, data_trasformation)  # we use a custom dataset defined in utils.py file
+    train_dataset = CustomDataset(train_data, train_labels,
+                                  data_trasformation)  # we use a custom dataset defined in utils.py file
+    test_dataset = CustomDataset(test_data, test_labels,
+                                 data_trasformation)  # we use a custom dataset defined in utils.py file
 
     batch_size = 2
 
@@ -93,9 +85,14 @@ if __name__ == "__main__":
 
     # 2 - TRAINING SETTINGS
 
+    # Set device where to run the model. GPU if available, otherwise cpu (very slow with deep learning models)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print('Device: ', device)
+
+    # Define useful variables
+
     best_acc = 0.0
-    num_epochs = 5  # number of epochs
-    lr = 0.001  # learning rate
+    num_epochs = 1  # number of epochs
     n_classes = len(np.unique(train_labels))  # number of classes in the dataset
     lab_classes = ['Muffin', 'Chihuahua']
 
@@ -105,25 +102,48 @@ if __name__ == "__main__":
     pred_label_train = torch.empty((0))
     true_label_train = torch.empty((0))
 
+    # Loss function
+    print('Defining loss function...')
+    criterion = torch.nn.CrossEntropyLoss()
+
+    # Scattering
+    print('Defining scattering...')
+    L = 8
+    J = 2
+    scattering = Scattering2D(J=J, shape=(IMAGE_SIZE[0], IMAGE_SIZE[1]), L=L)
+    K = 81  # Input channels for the ScatNet
+    scattering = scattering.to(device)
+
     # Model
-    model = CNN_128x128(input_channel=3, num_classes=n_classes).to(device)
+    print('Defining model...')
+    model = ScatNet2D(input_channels=K, scattering=scattering).to(device)
+
+    # Print model and number of parameters
+    print('-' * 50)
+    print(model)
+    print(summary(model))
+
+    best_epoch = 0
+
+    # import warnings
+    # warnings.filterwarnings("ignore", category=RuntimeWarning)
 
     # Optimizer
-    optim = torch.optim.Adam(model.parameters(), lr=lr)  # to choose
-    # Loss function
-    criterion = torch.nn.CrossEntropyLoss()  # to choose
-
+    print('Defining optimizer...')
+    lr = 0.0001  # learning rate
+    optim = torch.optim.Adam(model.parameters(), lr=lr)
 
     for epoch in range(num_epochs):
-        model.train()
-        for batch in trainset:
+        # Train step
+        model.train()  # tells to the model you are in training mode (batchnorm and dropout layers work)
+        for data_tr in trainset:
+            # Define the training loop
+            # TO DO
+            data = data_tr[0].to(device)
+            labels = data_tr[1].to(torch.long).to(device)
 
-            inputs = batch[0].to(device)
-            labels = batch[1].to(torch.long).to(device)
-
-            output = model(inputs)
-
-            loss = criterion(output,labels)
+            output = model(data)
+            loss = criterion(output, labels)
 
             optim.zero_grad()
             loss.backward()
@@ -136,21 +156,29 @@ if __name__ == "__main__":
 
         losses.append(loss.cpu().detach().numpy())
         acc_t = accuracy_score(true_label_train, pred_label_train)
+        pred_label_train = np.empty(0)
+        true_label_train = np.empty(0)
+
         acc_train.append(acc_t)
-        print(f'epoch : {epoch + 1}/{num_epochs}, loss = {loss} - acc = {acc_t}')
-        # print("  epoch : {}/{}, loss = {:.4f} - acc = {:.4f}".format(epoch + 1, num_epochs, loss, acc_t))
-        if acc_t > best_acc:  # save the best model (the highest accuracy in validation)
-            # save the best model in .pt format
-            # to do
-            best_acc = acc_t
+        # if epoch % 20 == 0:
+            # print("  epoch : {}/{}, loss = {:.4f} - acc = {:.4f}".format(epoch + 1, num_epochs, loss, acc_t))
+        print(f'EPOCH: {epoch}, LOSS: {loss}')
+
+        # Save the model with best accuracy across the epoch
+        # TO DO
+        # if acc_t > max(acc_train):
+        #     torch.save(model.state_dict(), './models_trained/model.pt')
 
         # Reinitialize the variables to compute accuracy
         pred_label_train = torch.empty((0))
         true_label_train = torch.empty((0))
 
+    print('-' * 30)
+    print('Best model accuracy is {} at epoch {}/{}'.format(round(best_acc, 3), best_epoch + 1, num_epochs))
+
     from datetime import datetime
     date_time = datetime.now().strftime('%d-%m-%Y__%H-%M-%S-%f')[:-3]
-    models_trained_path = './models_trained/model'
+    models_trained_path = './models_trained/model_SCA_'
 
     torch.save(model.state_dict(), f'{models_trained_path}_{date_time}.pt')
 
@@ -171,29 +199,48 @@ if __name__ == "__main__":
     plt.tight_layout()
     plt.show()
 
-
-    ### 3 - TESTING
-
-    # to use when model is saved
-    model_test = CNN_128x128(input_channel=3, num_classes=n_classes).to(device)  # Initialize a new model
-    model_test.load_state_dict(torch.load(f'{models_trained_path}_{date_time}.pt'))  # Load the model
-    # to use when model is saved
+    model_test = ScatNet2D(input_channels=K, scattering=scattering).to(device)  # Initialize a new model
+    model_test.load_state_dict(torch.load(f'{models_trained_path}_{date_time}.pt'))  # Load th
 
     pred_label_test = torch.empty((0, n_classes)).to(device)
     true_label_test = torch.empty((0)).to(device)
 
+    model_test.eval()
     with torch.no_grad():
         for data in testset:
+
             X_te, y_te = data
-            X_te = X_te.view(batch_size, 3, 128, 128).float().to(device)
+
+            X_te = X_te.to(device)
             y_te = y_te.to(device)
+
             output_test = model_test(X_te)
+
             pred_label_test = torch.cat((pred_label_test, output_test), dim=0)
             true_label_test = torch.cat((true_label_test, y_te), dim=0)
 
     compute_metrics(y_true=true_label_test, y_pred=pred_label_test,
                     lab_classes=lab_classes)  # function to compute the metrics (accuracy and confusion matrix)
 
+    from colorsys import hls_to_rgb
+    from scipy.fft import fft2
+    def colorize(z):
+        n, m = z.shape
+        c = np.zeros((n, m, 3))
+        c[np.isinf(z)] = (1.0, 1.0, 1.0)
+        c[np.isnan(z)] = (0.5, 0.5, 0.5)
+
+        idx = ~(np.isinf(z) + np.isnan(z))
+        A = (np.angle(z[idx]) + np.pi) / (2 * np.pi)
+        A = (A + 0.5) % 1.0
+        B = 1.0 / (1.0 + abs(z[idx]) ** 0.3)
+        c[idx] = [hls_to_rgb(a, b, 0.8) for a, b in zip(A, B)]
+        return c
+
+
+
+if __name__ == "__main__":
+    main()
 
 
 
