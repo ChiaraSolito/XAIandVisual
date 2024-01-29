@@ -1,29 +1,48 @@
 # Libraries
 import os
-from zipfile import ZipFile
 import glob
 import cv2
 import numpy as np
-import torch
-from torch.utils.data import DataLoader
-from kymatio.torch import Scattering2D
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
+import random
 import matplotlib.pyplot as plt
 import seaborn as sns
-from utils import CustomDataset, compute_metrics
-from ScatNet import ScatNet2D
-from torchinfo import summary
+from zipfile import ZipFile
+from datetime import datetime
+from colorsys import hls_to_rgb
+from scipy.fft import fft2
 
-import random
+import torch
+from torch.utils.data import DataLoader
+from torchinfo import summary
+from kymatio.torch import Scattering2D
 from torchvision.transforms import ToTensor, Compose, Resize, ToPILImage
 
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+
+from utils import CustomDataset, compute_metrics
+from ScatNet import ScatNet2D
+
+def colorize(z):
+    n, m = z.shape
+    c = np.zeros((n, m, 3))
+    c[np.isinf(z)] = (1.0, 1.0, 1.0)
+    c[np.isnan(z)] = (0.5, 0.5, 0.5)
+
+    idx = ~(np.isinf(z) + np.isnan(z))
+    A = (np.angle(z[idx]) + np.pi) / (2 * np.pi)
+    A = (A + 0.5) % 1.0
+    B = 1.0 / (1.0 + abs(z[idx]) ** 0.3)
+    c[idx] = [hls_to_rgb(a, b, 0.8) for a, b in zip(A, B)]
+    return c
 
 def main():
+   
     ### 1 - DATA LOADING
 
     path_train = "./data/train/"
     path_test = "./data/test/"
+
 
     n_muffins_train = len(os.listdir(path_train + "muffin"))  # 2174
     n_muffins_test = len(os.listdir(path_test + "muffin"))  # 544
@@ -41,12 +60,12 @@ def main():
     test_labels = test_labels.astype('uint8')
 
     # Load train set
-    train_data = [cv2.imread(file) for file in glob.glob('./data/train/muffin/*.jpg')]
-    train_data.extend(cv2.imread(file) for file in glob.glob('./data/train/chihuahua/*.jpg'))
+    train_data = [cv2.imread(file) for file in glob.glob(path_train + '/muffin/*.jpg')]
+    train_data.extend(cv2.imread(file) for file in glob.glob(path_train + 'chihuahua/*.jpg'))
 
     # Load test set
-    test_data = [cv2.imread(file) for file in glob.glob('./data/test/muffin/*.jpg')]
-    test_data.extend(cv2.imread(file) for file in glob.glob('./data/test/chihuahua/*.jpg'))
+    test_data = [cv2.imread(file) for file in glob.glob(path_test + '/muffin/*.jpg')]
+    test_data.extend(cv2.imread(file) for file in glob.glob(path_test +'/chihuahua/*.jpg'))
 
     # Random shuffle train and test set
     train_list = list(zip(train_data, train_labels))
@@ -59,7 +78,8 @@ def main():
     test_data, test_labels = zip(*test_list)
 
     # Set device where to run the model. GPU if available, otherwise cpu (very slow with deep learning models)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    #device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = "cpu"
     print('Device: ', device)
 
     IMAGE_SIZE = (128, 128)
@@ -86,13 +106,14 @@ def main():
     # 2 - TRAINING SETTINGS
 
     # Set device where to run the model. GPU if available, otherwise cpu (very slow with deep learning models)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    #device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = 'cpu'
     print('Device: ', device)
 
     # Define useful variables
 
     best_acc = 0.0
-    num_epochs = 1  # number of epochs
+    num_epochs = 1 # number of epochs
     n_classes = len(np.unique(train_labels))  # number of classes in the dataset
     lab_classes = ['Muffin', 'Chihuahua']
 
@@ -176,10 +197,9 @@ def main():
     print('-' * 30)
     print('Best model accuracy is {} at epoch {}/{}'.format(round(best_acc, 3), best_epoch + 1, num_epochs))
 
-    from datetime import datetime
     date_time = datetime.now().strftime('%d-%m-%Y__%H-%M-%S-%f')[:-3]
     models_trained_path = './models_trained/model_SCA_'
-
+    image_path = './models_trained/images/'
     torch.save(model.state_dict(), f'{models_trained_path}_{date_time}.pt')
 
     # Plot the results
@@ -189,14 +209,16 @@ def main():
     plt.xlabel("Epochs")
     plt.ylabel("Loss")
     plt.tight_layout()
+    plt.savefig(f'{image_path}learning_curve_SCAT_{date_time}.png')
     plt.show()
-
+    
     plt.figure(figsize=(8, 5))
     plt.plot(list(range(num_epochs)), acc_train)
     plt.title("Accuracy curve")
     plt.xlabel("Epochs")
     plt.ylabel("Accuracy")
     plt.tight_layout()
+    plt.savefig(f'{image_path}accuracy_SCAT_{date_time}.png')
     plt.show()
 
     model_test = ScatNet2D(input_channels=K, scattering=scattering).to(device)  # Initialize a new model
@@ -222,27 +244,35 @@ def main():
     compute_metrics(y_true=true_label_test, y_pred=pred_label_test,
                     lab_classes=lab_classes)  # function to compute the metrics (accuracy and confusion matrix)
 
-    from colorsys import hls_to_rgb
-    from scipy.fft import fft2
-    def colorize(z):
-        n, m = z.shape
-        c = np.zeros((n, m, 3))
-        c[np.isinf(z)] = (1.0, 1.0, 1.0)
-        c[np.isnan(z)] = (0.5, 0.5, 0.5)
+    #Plots
+    fig, axs = plt.subplots(J, L, sharex=True, sharey=True, )
+    fig.set_figheight(5)
+    fig.set_figwidth(12)
+    i = 0
+    for filter in scattering.psi:
+        f = filter["levels"][0]
+        filter_c = fft2(f)
+        filter_c = np.fft.fftshift(filter_c)
+        axs[i // L, i % L].imshow(colorize(filter_c))
+        axs[i // L, i % L].axis('off')
+        axs[i // L, i % L].set_title("$j = {}$ \n $\\theta={}$".format(i // L, i % L), fontsize=12)
+        i = i+1
 
-        idx = ~(np.isinf(z) + np.isnan(z))
-        A = (np.angle(z[idx]) + np.pi) / (2 * np.pi)
-        A = (A + 0.5) % 1.0
-        B = 1.0 / (1.0 + abs(z[idx]) ** 0.3)
-        c[idx] = [hls_to_rgb(a, b, 0.8) for a, b in zip(A, B)]
-        return c
+    #plt.title('Wavelets')
+    plt.show()
 
+    f = scattering.phi["levels"][0]
+    filter_c = fft2(f)
+    filter_c = np.fft.fftshift(filter_c)
+    filter_c = np.abs(filter_c)
 
+    plt.figure(figsize=(5,5))
+    plt.imshow(filter_c, cmap='Greys')
+    plt.grid(False)
+    plt.title('Low-pass filter (scaling function)')
+    plt.imshow(np.log(filter_c), cmap='Greys'); plt.grid(False); plt.title('Low-pass filter (scaling function)')
+    #plt.style.use(['no-latex'])
+    plt.show()
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
