@@ -1,6 +1,3 @@
-
-
-
 # import CNN
 from CNN_128x128 import CNN_128x128
 
@@ -21,9 +18,7 @@ from sklearn.metrics import accuracy_score
 import matplotlib.pyplot as plt
 import seaborn as sns
 from utils import CustomDataset, compute_metrics, plot_weights, visTensor
-
-import os
-
+from datetime import datetime
 
 
 if __name__ == "__main__":
@@ -49,12 +44,12 @@ if __name__ == "__main__":
     test_labels = test_labels.astype('uint8')
 
     # Load train set
-    train_data = [cv2.imread(file) for file in glob.glob('./data/train/muffin/*.jpg')]
-    train_data.extend(cv2.imread(file) for file in glob.glob('./data/train/chihuahua/*.jpg'))
+    train_data = [cv2.imread(file) for file in glob.glob(path_train + '/muffin/*.jpg')]
+    train_data.extend(cv2.imread(file) for file in glob.glob(path_train + 'chihuahua/*.jpg'))
 
     # Load test set
-    test_data = [cv2.imread(file) for file in glob.glob('./data/test/muffin/*.jpg')]
-    test_data.extend(cv2.imread(file) for file in glob.glob('./data/test/chihuahua/*.jpg'))
+    test_data = [cv2.imread(file) for file in glob.glob(path_test + '/muffin/*.jpg')]
+    test_data.extend(cv2.imread(file) for file in glob.glob(path_test +'/chihuahua/*.jpg'))
 
 
     # Random shuffle train and test set
@@ -113,7 +108,6 @@ if __name__ == "__main__":
     # Loss function
     criterion = torch.nn.CrossEntropyLoss()  # to choose
 
-
     for epoch in range(num_epochs):
         model.train()
         for batch in trainset:
@@ -148,9 +142,9 @@ if __name__ == "__main__":
         pred_label_train = torch.empty((0))
         true_label_train = torch.empty((0))
 
-    from datetime import datetime
     date_time = datetime.now().strftime('%d-%m-%Y__%H-%M-%S-%f')[:-3]
     models_trained_path = './models_trained/model_CNN_'
+    image_path = './models_trained/images/'
 
     torch.save(model.state_dict(), f'{models_trained_path}_{date_time}.pt')
 
@@ -161,6 +155,7 @@ if __name__ == "__main__":
     plt.xlabel("Epochs")
     plt.ylabel("Loss")
     plt.tight_layout()
+    plt.savefig(f'{image_path}learning_curve_CNN_{date_time}.png')
     plt.show()
 
     plt.figure(figsize=(8, 5))
@@ -169,8 +164,8 @@ if __name__ == "__main__":
     plt.xlabel("Epochs")
     plt.ylabel("Accuracy")
     plt.tight_layout()
+    plt.savefig(f'{image_path}accuracy_CNN_{date_time}.png')
     plt.show()
-
 
     ### 3 - TESTING
 
@@ -193,9 +188,3 @@ if __name__ == "__main__":
 
     compute_metrics(y_true=true_label_test, y_pred=pred_label_test,
                     lab_classes=lab_classes)  # function to compute the metrics (accuracy and confusion matrix)
-
-
-
-
-
-
