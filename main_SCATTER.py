@@ -8,8 +8,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from zipfile import ZipFile
 from datetime import datetime
-from colorsys import hls_to_rgb
-from scipy.fft import fft2
 
 import torch
 from torch.utils.data import DataLoader
@@ -20,21 +18,8 @@ from torchvision.transforms import ToTensor, Compose, Resize, ToPILImage
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
-from utils import CustomDataset, compute_metrics
+from utils import CustomDataset, compute_metrics, plot_kernels
 from ScatNet import ScatNet2D
-
-def colorize(z):
-    n, m = z.shape
-    c = np.zeros((n, m, 3))
-    c[np.isinf(z)] = (1.0, 1.0, 1.0)
-    c[np.isnan(z)] = (0.5, 0.5, 0.5)
-
-    idx = ~(np.isinf(z) + np.isnan(z))
-    A = (np.angle(z[idx]) + np.pi) / (2 * np.pi)
-    A = (A + 0.5) % 1.0
-    B = 1.0 / (1.0 + abs(z[idx]) ** 0.3)
-    c[idx] = [hls_to_rgb(a, b, 0.8) for a, b in zip(A, B)]
-    return c
 
 def main():
    
@@ -78,8 +63,7 @@ def main():
     test_data, test_labels = zip(*test_list)
 
     # Set device where to run the model. GPU if available, otherwise cpu (very slow with deep learning models)
-    #device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    device = "cpu"
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print('Device: ', device)
 
     IMAGE_SIZE = (128, 128)
@@ -106,14 +90,13 @@ def main():
     # 2 - TRAINING SETTINGS
 
     # Set device where to run the model. GPU if available, otherwise cpu (very slow with deep learning models)
-    #device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    device = 'cpu'
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print('Device: ', device)
 
     # Define useful variables
 
     best_acc = 0.0
-    num_epochs = 1 # number of epochs
+    num_epochs = 30 # number of epochs
     n_classes = len(np.unique(train_labels))  # number of classes in the dataset
     lab_classes = ['Muffin', 'Chihuahua']
 
@@ -244,35 +227,7 @@ def main():
     compute_metrics(y_true=true_label_test, y_pred=pred_label_test,
                     lab_classes=lab_classes)  # function to compute the metrics (accuracy and confusion matrix)
 
-    #Plots
-    fig, axs = plt.subplots(J, L, sharex=True, sharey=True, )
-    fig.set_figheight(5)
-    fig.set_figwidth(12)
-    i = 0
-    for filter in scattering.psi:
-        f = filter["levels"][0]
-        filter_c = fft2(f)
-        filter_c = np.fft.fftshift(filter_c)
-        axs[i // L, i % L].imshow(colorize(filter_c))
-        axs[i // L, i % L].axis('off')
-        axs[i // L, i % L].set_title("$j = {}$ \n $\\theta={}$".format(i // L, i % L), fontsize=12)
-        i = i+1
-
-    #plt.title('Wavelets')
-    plt.show()
-
-    f = scattering.phi["levels"][0]
-    filter_c = fft2(f)
-    filter_c = np.fft.fftshift(filter_c)
-    filter_c = np.abs(filter_c)
-
-    plt.figure(figsize=(5,5))
-    plt.imshow(filter_c, cmap='Greys')
-    plt.grid(False)
-    plt.title('Low-pass filter (scaling function)')
-    plt.imshow(np.log(filter_c), cmap='Greys'); plt.grid(False); plt.title('Low-pass filter (scaling function)')
-    #plt.style.use(['no-latex'])
-    plt.show()
+    plot_kernels(J,L,scattering)
 
 if __name__ == "__main__":
     main()

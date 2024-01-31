@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from torchvision import utils
 from torch.utils.data import Dataset
+from colorsys import hls_to_rgb
+from scipy.fft import fft2
 from sklearn.metrics import accuracy_score, confusion_matrix
 
 ##### Style for chart
@@ -62,6 +64,18 @@ def compute_metrics(y_true,y_pred,lab_classes):
     plt.ylabel('true')
     plt.show()
 
+def colorize(z):
+    n, m = z.shape
+    c = np.zeros((n, m, 3))
+    c[np.isinf(z)] = (1.0, 1.0, 1.0)
+    c[np.isnan(z)] = (0.5, 0.5, 0.5)
+
+    idx = ~(np.isinf(z) + np.isnan(z))
+    A = (np.angle(z[idx]) + np.pi) / (2 * np.pi)
+    A = (A + 0.5) % 1.0
+    B = 1.0 / (1.0 + abs(z[idx]) ** 0.3)
+    c[idx] = [hls_to_rgb(a, b, 0.8) for a, b in zip(A, B)]
+    return c
 
 # Function to visualize the kernels for the two convolutional layers
 def visTensor(tensor, ch=0, allkernels=False, nrow=8, padding=1):
@@ -182,4 +196,33 @@ def plot_weights(model_layer, single_channel = True, collated = False):
         
   else:
     print("Can only visualize layers which are convolutional")
-        
+
+def plot_kernels(J,L,scattering):      
+    fig, axs = plt.subplots(J, L, sharex=True, sharey=True, )
+    fig.set_figheight(5)
+    fig.set_figwidth(12)
+    i = 0
+    for filter in scattering.psi:
+        f = filter["levels"][0]
+        filter_c = fft2(f)
+        filter_c = np.fft.fftshift(filter_c)
+        axs[i // L, i % L].imshow(colorize(filter_c))
+        axs[i // L, i % L].axis('off')
+        axs[i // L, i % L].set_title("$j = {}$ \n $\\theta={}$".format(i // L, i % L), fontsize=12)
+        i = i+1
+
+    #plt.title('Wavelets')
+    plt.show()
+
+    f = scattering.phi["levels"][0]
+    filter_c = fft2(f)
+    filter_c = np.fft.fftshift(filter_c)
+    filter_c = np.abs(filter_c)
+
+    plt.figure(figsize=(5,5))
+    plt.imshow(filter_c, cmap='Greys')
+    plt.grid(False)
+    plt.title('Low-pass filter (scaling function)')
+    plt.imshow(np.log(filter_c), cmap='Greys'); plt.grid(False); plt.title('Low-pass filter (scaling function)')
+    #plt.style.use(['no-latex'])
+    plt.show()
