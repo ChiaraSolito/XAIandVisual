@@ -228,6 +228,7 @@ def main():
                     lab_classes=lab_classes)  # function to compute the metrics (accuracy and confusion matrix)
 
     plot_kernels(J,L,scattering)
+    #TERRA CHIAMA RIGHE
 
 if __name__ == "__main__":
     main()
