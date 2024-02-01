@@ -1,4 +1,6 @@
-/data/
-venv/
+data/*
+venv/*
+csv/*
 __pycache__/
-models_trained/
+models_trained/*.pt
+models_trained/*.png
