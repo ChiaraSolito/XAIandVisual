@@ -1,6 +1,9 @@
-data/*
+data/test/*
+data/test_original
+data/train/*
+data/train_original
 venv/*
-csv/*
+csv/*.csv
 __pycache__/
 models_trained/*.pt
 models_trained/*.png
