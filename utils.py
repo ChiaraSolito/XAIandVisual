@@ -35,7 +35,7 @@ class CustomDataset(Dataset):
     def __getitem__(self, idx):
         data = self.data[idx]
         if self.transform is not None:
-            data = self.transform(data).squeeze(0)
+            data = self.transform(data) #.squeeze(0)
         label = self.labels[idx]
         sample = [data,label]
         return sample
