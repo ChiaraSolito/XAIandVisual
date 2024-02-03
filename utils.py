@@ -1,5 +1,8 @@
 import pandas as pd
 import numpy as np
+import os
+import cv2
+import glob
 import torch
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -20,7 +23,34 @@ plt.rc('ytick', labelsize=13)
 plt.rc('legend', fontsize=13)
 plt.rc('font', size=13)
 
+def data_loading(path_train:str, 
+                 path_test:str) -> tuple[list[np.ndarray], #train_images
+                        list[str], #train_labels
+                        list[np.ndarray], #test_images
+                        list[str]]: #test_labels
 
+    n_muffins_train = len(os.listdir(path_train + "muffin")) # 2174
+    n_muffins_test =  len(os.listdir(path_test + "muffin")) # 544
+    n_chihuahua_train = len(os.listdir(path_train + "chihuahua"))  # 2559
+    n_chihuahua_test = len(os.listdir(path_test + "chihuahua"))  # 640
+
+    # Define train and test labels - 0 muffins, 1 chihuahua
+    train_labels = np.zeros(n_muffins_train + n_chihuahua_train)
+    train_labels[n_muffins_train:] = 1
+    test_labels = np.zeros(n_muffins_test + n_chihuahua_test)
+    test_labels[n_muffins_test:] = 1
+    train_labels = train_labels.astype('uint8')
+    test_labels = test_labels.astype('uint8')
+
+    # Load train set
+    train_data = [cv2.imread(file) for file in glob.glob(path_train + 'muffin/*.jpg')]
+    train_data.extend(cv2.imread(file) for file in glob.glob(path_train + 'chihuahua/*.jpg'))
+
+    # Load test set
+    test_data = [cv2.imread(file) for file in glob.glob(path_test + '/muffin/*.jpg')]
+    test_data.extend(cv2.imread(file) for file in glob.glob(path_test +'/chihuahua/*.jpg'))
+
+    return train_data, train_labels, test_data, test_labels
 
 class CustomDataset(Dataset):
     def __init__(self, data, labels, transform=None):
@@ -229,7 +259,7 @@ def plot_kernels(J,L,scattering):
     #plt.style.use(['no-latex'])
     plt.show()
 
-def get_mean(data:list[np.ndarray]) -> str:
+def get_mean(data:list[np.ndarray],model_name:str) -> str:
 
     r_mean_arr = []
     g_mean_arr = []
@@ -251,11 +281,11 @@ def get_mean(data:list[np.ndarray]) -> str:
     RGB_df["G_MEAN"] = [G_MEAN]
     RGB_df["B_MEAN"] = [B_MEAN]
 
-    df_name = "./csv/RGB_mean_df.csv"
+    df_name = f"./csv/{model_name}/RGB_mean_df.csv"
     RGB_df.to_csv(df_name)
     return df_name
 
-def get_std(data:list[np.ndarray]) -> str:
+def get_std(data:list[np.ndarray],model_name:str) -> str:
     r_std_arr = []
     g_std_arr = []
     b_std_arr = []
@@ -276,7 +306,7 @@ def get_std(data:list[np.ndarray]) -> str:
     RGB_std_df["G_STD"] = [G_STD]
     RGB_std_df["B_STD"] = [B_STD]
 
-    df_name = "./csv/RGB_std_df.csv"
+    df_name = f"./csv/{model_name}/RGB_std_df.csv"
     RGB_std_df.to_csv(df_name)
     return df_name
 

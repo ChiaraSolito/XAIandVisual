@@ -1,6 +1,3 @@
-# import CNN
-from CNN_128x128 import CNN_128x128
-
 # Libraries
 import os
 import glob
@@ -23,9 +20,12 @@ from datetime import datetime
 from sklearn.model_selection import StratifiedKFold
 from tqdm.auto import tqdm
 from timeit import default_timer as timer 
+from kymatio.torch import Scattering2D
+from ScatNet import ScatNet2D
+from CNN_128x128 import CNN_128x128
 import torch.nn as nn
 
-def stratified_kfold(train_data:list[np.ndarray], train_labels:list[str]) -> tuple[pd.DataFrame,pd.DataFrame,list,list]:
+def stratified_kfold(train_data:list[np.ndarray], train_labels:list[str],model_name:str) -> tuple[pd.DataFrame,pd.DataFrame,list,list]:
 
     skf = StratifiedKFold(n_splits=10,shuffle=True,random_state=42)
     skf.get_n_splits(train_data, train_labels)
@@ -46,8 +46,8 @@ def stratified_kfold(train_data:list[np.ndarray], train_labels:list[str]) -> tup
         train_splits["train_"+str(i)] = train_idx[i]
         val_splits["val_"+str(i)] = val_idx[i]
 
-    train_splits.to_csv("./csv/train_splits.csv")
-    val_splits.to_csv("./csv/val_splits.csv")
+    train_splits.to_csv(f"./csv/{model_name}/train_splits.csv")
+    val_splits.to_csv(f"./csv/{model_name}/val_splits.csv")
 
     return train_splits, val_splits, train_idx, val_idx
 
@@ -113,7 +113,8 @@ def train(model:torch.nn.Module,
           loss_fn:torch.nn.Module = CrossEntropyLoss(),
           epochs:int = 5,
           split:int = 0,
-          device:str = 'cpu'):
+          device:str = 'cpu',
+          model_name:str = 'CNN'):
 
     results = {"train_loss": [],
         "train_acc": [],
@@ -140,7 +141,7 @@ def train(model:torch.nn.Module,
                         'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict(),
                         'loss': val_loss,}
-            checkpoint_name = "./models_trained/CNN/checkpoint_"+str(split)+".pth"    
+            checkpoint_name = f"./models_trained/{model_name}/checkpoint_"+str(split)+".pth"    
 
         print(
             f"Epoch: {epoch+1} | "
@@ -159,13 +160,13 @@ def train(model:torch.nn.Module,
     torch.save(checkpoint, checkpoint_name)
     return results
 
-def normalization(data:list[np.ndarray]):
+def normalization(data:list[np.ndarray],model_name:str):
 
-    RGB_mean_path = get_mean(data)
+    RGB_mean_path = get_mean(data,model_name)
     RGB_mean_df = pd.read_csv(RGB_mean_path)
     print("Red ch mean = ",RGB_mean_df.iloc[0].R_MEAN.item(),"\nGreen ch mean = ",RGB_mean_df.iloc[0].G_MEAN.item(),"\nBlue ch mean = ",RGB_mean_df.iloc[0].B_MEAN.item())
 
-    RGB_std_path = get_std(data)
+    RGB_std_path = get_std(data,model_name)
     RGB_std_df = pd.read_csv(RGB_std_path)
     print("Red ch std = ",RGB_std_df.iloc[0].R_STD.item(),"\nGreen ch std = ",RGB_std_df.iloc[0].G_STD.item(),"\nBlue ch std = ",RGB_std_df.iloc[0].B_STD.item())
 
@@ -185,33 +186,44 @@ def normalization(data:list[np.ndarray]):
 
     return data_transform
 
-def training_main(data,train_data, train_labels,base_model: nn.Module):
+def training_main(data,train_data, train_labels,base_model:str):
 
     ##### NORMALIZATION #####
-    data_transform = normalization(data)
+    data_transform = normalization(data,base_model)
 
     #### Stratified K-FOLD ####
-    train_splits, val_splits, train_idx, val_idx = stratified_kfold(train_data,train_labels)
+    train_splits, val_splits, train_idx, val_idx = stratified_kfold(train_data,train_labels,base_model)
 
     #### TRAINING ####
-    best_acc = 0.0
     num_epochs = 5 
-    lr = 0.001
     n_classes = 2
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print('Device: ', device)
+
+
+    if base_model == 'CNN':
+        app_model = CNN_128x128(input_channel=3, num_classes=n_classes).to(device)
+        lr = 0.001
+    elif base_model == 'ScatNet':
+        L = 8
+        J = 2
+        scattering = Scattering2D(J=J, shape=(128, 128), L=L)
+        K = 81  # Input channels for the ScatNet
+        scattering = scattering.to(device)
+        app_model = ScatNet2D(input_channels=K, scattering=scattering).to(device)
+        lr = 0.0001
+    else:
+        print('Model not recognized, terminating program.')
+        exit()
 
     criterion = torch.nn.CrossEntropyLoss()  # to choose
 
     ###### ARRIVATE QUI ##########
     for i in range(0,10): 
         
-        model = base_model(input_channel=3, num_classes=n_classes).to(device)
+        model = app_model
         optimizer = torch.optim.Adam(model.parameters(), lr=lr) 
-
-        train_str = "train_"+str(i)
-        val_str = "val_"+str(i)
         train_data_fold = CustomDataset([train_data[x] for x in train_idx[i]],[train_labels[x] for x in train_idx[i]],transform=data_transform)
         val_data_fold = CustomDataset([train_data[x] for x in val_idx[i]],[train_labels[x] for x in val_idx[i]],transform=data_transform)
         
@@ -227,7 +239,8 @@ def training_main(data,train_data, train_labels,base_model: nn.Module):
                                 loss_fn=criterion,
                                 epochs=num_epochs,
                                 split=i,
-                                device=device)
+                                device=device,
+                                model_name=base_model)
         
         end_time = timer()
         print(f"Total training time for split {i}: {end_time-start_time:.3f} seconds")
@@ -245,25 +258,24 @@ def training_main(data,train_data, train_labels,base_model: nn.Module):
         results_df["train_acc"] = train_acc
         results_df["val_acc"] = val_acc
         results_df["epochs"] = num_epochs
-        results_df_name = "./csv/results_df_"+str(i)+".csv"
+        results_df_name = f"./csv/{base_model}/results_df_"+str(i)+".csv"
         results_df.to_csv(results_df_name)
 
     max_val_accuracies = np.zeros([10,1])
-    val_accuracies = np.zeros([10,1])
-    train_losses = np.zeros([10,1])
+    val_accuracies = np.zeros([10,num_epochs])
+    train_losses = np.zeros([10,num_epochs])
 
     for i in range(10):
-        results_string = "./csv/results_df_"+str(i)+".csv"
+        results_string = f"./csv/{base_model}/results_df_"+str(i)+".csv"
         max_val_accuracies[i] = np.max(pd.read_csv(results_string)["val_acc"])
         val_accuracies[i] = (pd.read_csv(results_string)["val_acc"]).to_list()
         train_losses[i] = (pd.read_csv(results_string)["val_acc"]).to_list()
 
     index = np.argmax(max_val_accuracies)
 
-    model_string = "./models_trained/CNN/checkpoint_"+str(index)+".pth"
-    
+    model_string = f"./models_trained/{base_model}/checkpoint_"+str(index)+".pth"
     checkpoint = torch.load(model_string,map_location=torch.device("cpu")) 
-    best_model = base_model(input_channel=3, num_classes=n_classes).to(device)
+    best_model = app_model
     best_model.load_state_dict(checkpoint["model_state_dict"])
 
     for parameter in best_model.parameters():
