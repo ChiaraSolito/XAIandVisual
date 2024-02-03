@@ -1,9 +1,10 @@
 data/test/*
-data/test_original
+data/test_complete/*
 data/train/*
-data/train_original
+data/train_complete/*
 venv/*
 csv/*.csv
 __pycache__/
-models_trained/*.pt
+models_trained/CNN/*.pth
+models_trained/ScatNet/*.pth
 models_trained/*.png
