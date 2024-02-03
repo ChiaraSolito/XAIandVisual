@@ -5,9 +5,11 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from torchvision import utils
 from torch.utils.data import Dataset
+from pandas import DataFrame
 from colorsys import hls_to_rgb
 from scipy.fft import fft2
 from sklearn.metrics import accuracy_score, confusion_matrix
+from PIL import Image
 
 ##### Style for chart
 sns.set_style('darkgrid')
@@ -226,3 +228,56 @@ def plot_kernels(J,L,scattering):
     plt.imshow(np.log(filter_c), cmap='Greys'); plt.grid(False); plt.title('Low-pass filter (scaling function)')
     #plt.style.use(['no-latex'])
     plt.show()
+
+def get_mean(data:list[np.ndarray]) -> str:
+
+    r_mean_arr = []
+    g_mean_arr = []
+    b_mean_arr = []
+
+    for i in range(0,len(data)):
+        img_np = data[i]
+        r_mean,g_mean,b_mean = np.mean(img_np,axis=(0,1))
+        r_mean_arr.append(r_mean)
+        g_mean_arr.append(g_mean)
+        b_mean_arr.append(b_mean)
+
+    R_MEAN = np.mean(r_mean_arr) / 255
+    G_MEAN = np.mean(g_mean_arr) / 255
+    B_MEAN = np.mean(b_mean_arr) / 255
+
+    RGB_df = pd.DataFrame(columns= ["R_MEAN","G_MEAN","B_MEAN"])
+    RGB_df["R_MEAN"] = [R_MEAN]
+    RGB_df["G_MEAN"] = [G_MEAN]
+    RGB_df["B_MEAN"] = [B_MEAN]
+
+    df_name = "./csv/RGB_mean_df.csv"
+    RGB_df.to_csv(df_name)
+    return df_name
+
+def get_std(data:list[np.ndarray]) -> str:
+    r_std_arr = []
+    g_std_arr = []
+    b_std_arr = []
+
+    for i in range(0,len(data)):
+        img_np = data[i]
+        r_std,g_std,b_std = np.std(img_np,axis=(0,1))
+        r_std_arr.append(r_std)
+        g_std_arr.append(g_std)
+        b_std_arr.append(b_std)
+
+    R_STD = np.mean(r_std_arr) / 255
+    G_STD = np.mean(g_std_arr) / 255
+    B_STD = np.mean(b_std_arr) / 255
+
+    RGB_std_df = pd.DataFrame(columns= ["R_STD","G_STD","B_STD"])
+    RGB_std_df["R_STD"] = [R_STD]
+    RGB_std_df["G_STD"] = [G_STD]
+    RGB_std_df["B_STD"] = [B_STD]
+
+    df_name = "./csv/RGB_std_df.csv"
+    RGB_std_df.to_csv(df_name)
+    return df_name
+
+    
