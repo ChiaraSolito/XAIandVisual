@@ -8,3 +8,5 @@ matplotlib
 tqdm
 pillow
 opencv-python
+torchinfo
+kymatio
