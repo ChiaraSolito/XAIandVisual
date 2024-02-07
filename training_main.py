@@ -4,7 +4,7 @@ import pandas as pd
 import torch
 from torch.nn import CrossEntropyLoss
 from torch.utils.data import DataLoader
-from utils import CustomDataset, compute_metrics
+from utils import CustomDataset, compute_metrics, plot_results
 from sklearn.model_selection import StratifiedKFold
 from tqdm.auto import tqdm
 from timeit import default_timer as timer
@@ -222,12 +222,18 @@ def training_main(data_transform, train_data, train_labels, base_model: str):
     max_val_accuracies = np.zeros([NUM_FOLD, 1])
     val_accuracies = np.zeros([NUM_FOLD, num_epochs])
     train_losses = np.zeros([NUM_FOLD, num_epochs])
+    val_losses = np.zeros([NUM_FOLD, num_epochs])
+    f1_scores = np.zeros([NUM_FOLD,num_epochs])
 
     for i in range(NUM_FOLD):
         results_string = f"./csv/{base_model}/results_df_" + str(i) + ".csv"
         max_val_accuracies[i] = np.max(pd.read_csv(results_string)["val_acc"])
         val_accuracies[i] = (pd.read_csv(results_string)["val_acc"]).to_list()
-        train_losses[i] = (pd.read_csv(results_string)["val_acc"]).to_list()
+        val_losses[i] = (pd.read_csv(results_string)["val_loss"]).to_list()
+        train_losses[i] = (pd.read_csv(results_string)["train_loss"]).to_list()
+        f1_scores[i] = (pd.read_csv(results_string)["val_f1"]).to_list()
+
+    plot_results(val_accuracies, train_losses, val_losses, f1_scores, base_model)
 
     index = np.argmax(max_val_accuracies)
 
