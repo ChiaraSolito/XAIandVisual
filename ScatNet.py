@@ -1,5 +1,5 @@
 import torch
-import torch.nn.functional as F
+import torch.nn
 import torch.optim
 from kymatio.torch import Scattering2D
 
@@ -30,14 +30,24 @@ class ScatNet2D(torch.nn.Module):
             torch.nn.ReLU()
         )
 
+        # self.fc1 = nn.Linear(576,256)
+        # self.drop = nn.Dropout(p=0.1)
+        # self.fc2 = nn.Linear(256,32)
+        # self.fc3 = nn.Linear(32,self.num_classes)
+
         # Weights initialization
         for layer in self.classifier:
             if isinstance(layer, torch.nn.Linear):
                 torch.nn.init.xavier_uniform_(layer.weight)
 
     def forward(self, x):
-        x = self.scattering(x)  #  scattering transform
+        x = self.scattering(x)  # scattering transform
         x = x.view(x.size(0), -1)
-        x = self.classifier(x)  # classifier
-        x = torch.softmax(x, dim=1)  # get probabilities for each class
+        x = self.classifier(x)  
+        
+        # x = F.relu(self.fc1(x))
+        # x = F.relu(self.fc2(x))
+        # x = self.drop(x)
+        # x = self.fc3(x)
+
         return x
