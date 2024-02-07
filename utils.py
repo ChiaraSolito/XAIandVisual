@@ -8,13 +8,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from torchvision import utils
 from torch.utils.data import Dataset
-from pandas import DataFrame
 from colorsys import hls_to_rgb
 from scipy.fft import fft2
-from sklearn.metrics import accuracy_score, confusion_matrix
-from PIL import Image
+from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
+from torchvision.transforms import ToTensor, Compose, Resize, ToPILImage, Normalize
 
-##### Style for chart
+# Style for chart
 sns.set_style('darkgrid')
 plt.rc('axes', titlesize=18)
 plt.rc('axes', labelsize=14)
@@ -23,14 +22,15 @@ plt.rc('ytick', labelsize=13)
 plt.rc('legend', fontsize=13)
 plt.rc('font', size=13)
 
-def data_loading(path_train:str, 
-                 path_test:str) -> tuple[list[np.ndarray], #train_images
-                        list[str], #train_labels
-                        list[np.ndarray], #test_images
-                        list[str]]: #test_labels
 
-    n_muffins_train = len(os.listdir(path_train + "muffin")) # 2174
-    n_muffins_test =  len(os.listdir(path_test + "muffin")) # 544
+def data_loading(path_train: str,
+                 path_test: str) -> tuple[list[np.ndarray],  # train_images
+                                          np.ndarray,  # train_labels
+                                          list[np.ndarray],  # test_images
+                                          np.ndarray]:  # test_labels
+
+    n_muffins_train = len(os.listdir(path_train + "muffin"))  # 2174
+    n_muffins_test = len(os.listdir(path_test + "muffin"))  # 544
     n_chihuahua_train = len(os.listdir(path_train + "chihuahua"))  # 2559
     n_chihuahua_test = len(os.listdir(path_test + "chihuahua"))  # 640
 
@@ -48,9 +48,10 @@ def data_loading(path_train:str,
 
     # Load test set
     test_data = [cv2.imread(file) for file in glob.glob(path_test + '/muffin/*.jpg')]
-    test_data.extend(cv2.imread(file) for file in glob.glob(path_test +'/chihuahua/*.jpg'))
+    test_data.extend(cv2.imread(file) for file in glob.glob(path_test + '/chihuahua/*.jpg'))
 
     return train_data, train_labels, test_data, test_labels
+
 
 class CustomDataset(Dataset):
     def __init__(self, data, labels, transform=None):
@@ -58,43 +59,45 @@ class CustomDataset(Dataset):
         self.data = data
         self.transform = transform
 
-
     def __len__(self):
         return len(self.labels)
 
     def __getitem__(self, idx):
         data = self.data[idx]
         if self.transform is not None:
-            data = self.transform(data) #.squeeze(0)
+            data = self.transform(data)  # .squeeze(0)
         label = self.labels[idx]
-        sample = [data,label]
+        sample = [data, label]
         return sample
 
 
-def compute_metrics(y_true,y_pred,lab_classes):
-    '''
-    Compute the metrics: accuracy, confusion matrix, precision, recall, F1 score and auROC.\n
+def compute_metrics(y_true, y_pred, classes):
+    """
+    Compute the metrics: accuracy, confusion matrix, F1 score.\n
     Args:
         y_true: true labels
         y_pred: predicted probabilities for each class
-        lab_classes: list of the groups in the study
-    '''
-    y_true, y_pred_prob = y_true.cpu(), y_pred.cpu()
-    _, y_pred_lab = y_pred_prob.max(1)
-    
+        classes: list of the classes
+    """
+
     # Accuracy
-    acc = accuracy_score(y_true,y_pred_lab)
-    print('Accuracy: {:.3f}\n'.format(acc))
+    acc = accuracy_score(y_true, y_pred[0].numpy())
+
+    # F1 score
+    f1score = f1_score(y_true, y_pred[0].numpy())
 
     # Confusion matrix
-    conf_mat = confusion_matrix(y_true,y_pred_lab,labels=list(range(0,len(lab_classes))))
-    conf_mat_df = pd.DataFrame(conf_mat,columns=lab_classes,index=lab_classes)
-    plt.figure(figsize=(7,5))
-    sns.heatmap(conf_mat_df,annot=True)
+    conf_mat = confusion_matrix(y_true, y_pred[0].numpy(), labels=list(range(0, len(classes))))
+    conf_mat_df = pd.DataFrame(conf_mat, columns=classes, index=classes)
+    plt.figure(figsize=(7, 5))
+    sns.heatmap(conf_mat_df, annot=True)
     plt.title('confusion matrix: test set')
     plt.xlabel('predicted')
     plt.ylabel('true')
-    plt.show()
+    #plt.show()
+
+    return acc, f1score
+
 
 def colorize(z):
     n, m = z.shape
@@ -109,50 +112,50 @@ def colorize(z):
     c[idx] = [hls_to_rgb(a, b, 0.8) for a, b in zip(A, B)]
     return c
 
+
 # Function to visualize the kernels for the two convolutional layers
 def visTensor(tensor, ch=0, allkernels=False, nrow=8, padding=1):
-        n,c,w,h = tensor.shape
+    n, c, w, h = tensor.shape
 
-        if allkernels: tensor = tensor.view(n*c, -1, w, h)
-        elif c != 3: tensor = tensor[:,ch,:,:].unsqueeze(dim=1)
+    if allkernels:
+        tensor = tensor.view(n * c, -1, w, h)
+    elif c != 3:
+        tensor = tensor[:, ch, :, :].unsqueeze(dim=1)
 
-        rows = np.min((tensor.shape[0] // nrow + 1, 64))    
-        grid = utils.make_grid(tensor, nrow=nrow, normalize=True, padding=padding)
-        plt.figure( figsize=(nrow,rows) )
-        plt.imshow(grid.numpy().transpose((1, 2, 0)))
-    
+    rows = np.min((tensor.shape[0] // nrow + 1, 64))
+    grid = utils.make_grid(tensor, nrow=nrow, normalize=True, padding=padding)
+    plt.figure(figsize=(nrow, rows))
+    plt.imshow(grid.numpy().transpose((1, 2, 0)))
+
 
 def plot_filters_single_channel_big(t):
-    
-    #setting the rows and columns
-    nrows = t.shape[0]*t.shape[2]
-    ncols = t.shape[1]*t.shape[3]
-    
-    
+    # setting the rows and columns
+    nrows = t.shape[0] * t.shape[2]
+    ncols = t.shape[1] * t.shape[3]
+
     npimg = np.array(t.numpy(), np.float32)
     npimg = npimg.transpose((0, 2, 1, 3))
     npimg = npimg.ravel().reshape(nrows, ncols)
-    
+
     npimg = npimg.T
-    
-    fig, ax = plt.subplots(figsize=(ncols/10, nrows/200))    
+
+    fig, ax = plt.subplots(figsize=(ncols / 10, nrows / 200))
     imgplot = sns.heatmap(npimg, xticklabels=False, yticklabels=False, cmap='gray', ax=ax, cbar=False)
 
 
 def plot_filters_single_channel(t):
-    
-    #kernels depth * number of kernels
-    nplots = t.shape[0]*t.shape[1]
+    # kernels depth * number of kernels
+    nplots = t.shape[0] * t.shape[1]
     ncols = 12
-    
-    nrows = 1 + nplots//ncols
-    #convert tensor to numpy image
+
+    nrows = 1 + nplots // ncols
+    # convert tensor to numpy image
     npimg = np.array(t.numpy(), np.float32)
-    
+
     count = 0
     fig = plt.figure(figsize=(ncols, nrows))
-    
-    #looping through all the kernels in each channel
+
+    # looping through all the kernels in each channel
     for i in range(t.shape[0]):
         for j in range(t.shape[1]):
             count += 1
@@ -165,31 +168,30 @@ def plot_filters_single_channel(t):
             ax1.axis('off')
             ax1.set_xticklabels([])
             ax1.set_yticklabels([])
-   
+
     plt.tight_layout()
     plt.show()
 
 
 def plot_filters_multi_channel(t):
-    
-    #get the number of kernals
-    num_kernels = t.shape[0]    
-    
-    #define number of columns for subplots
+    # get the number of kernels
+    num_kernels = t.shape[0]
+
+    # define number of columns for subplots
     num_cols = 12
-    #rows = num of kernels
+    # rows = num of kernels
     num_rows = num_kernels
-    
-    #set the figure size
-    fig = plt.figure(figsize=(num_cols,num_rows))
-    
-    #looping through all the kernels
+
+    # set the figure size
+    fig = plt.figure(figsize=(num_cols, num_rows))
+
+    # looping through all the kernels
     for i in range(t.shape[0]):
-        ax1 = fig.add_subplot(num_rows,num_cols,i+1)
-        
-        #for each kernel, we convert the tensor to numpy 
+        ax1 = fig.add_subplot(num_rows, num_cols, i + 1)
+
+        # for each kernel, we convert the tensor to numpy
         npimg = np.array(t[i].numpy(), np.float32)
-        #standardize the numpy image
+        # standardize the numpy image
         npimg = (npimg - np.mean(npimg)) / np.std(npimg)
         npimg = np.minimum(1, np.maximum(0, (npimg + 0.5)))
         npimg = npimg.transpose((1, 2, 0))
@@ -198,38 +200,38 @@ def plot_filters_multi_channel(t):
         ax1.set_title(str(i))
         ax1.set_xticklabels([])
         ax1.set_yticklabels([])
-        
-    plt.savefig('myimage.png', dpi=100)    
+
+    plt.savefig('myimage.png', dpi=100)
     plt.tight_layout()
     plt.show()
 
 
-def plot_weights(model_layer, single_channel = True, collated = False):
-  
-  #extracting the model features at the particular layer number
-  layer = model_layer
-  
-  #checking whether the layer is convolution layer or not 
-  if isinstance(layer, torch.nn.Conv2d):
-    #getting the weight tensor data
-    weight_tensor = layer.weight.data.cpu()
-    
-    if single_channel:
-      if collated:
-        plot_filters_single_channel_big(weight_tensor)
-      else:
-        plot_filters_single_channel(weight_tensor)
-        
-    else:
-      if weight_tensor.shape[1] == 3:
-        plot_filters_multi_channel(weight_tensor)
-      else:
-        print("Can only plot weights with three channels with single channel = False")
-        
-  else:
-    print("Can only visualize layers which are convolutional")
+def plot_weights(model_layer, single_channel=True, collated=False):
+    # extracting the model features at the particular layer number
+    layer = model_layer
 
-def plot_kernels(J,L,scattering):      
+    # checking whether the layer is convolution layer or not
+    if isinstance(layer, torch.nn.Conv2d):
+        # getting the weight tensor data
+        weight_tensor = layer.weight.data.cpu()
+
+        if single_channel:
+            if collated:
+                plot_filters_single_channel_big(weight_tensor)
+            else:
+                plot_filters_single_channel(weight_tensor)
+
+        else:
+            if weight_tensor.shape[1] == 3:
+                plot_filters_multi_channel(weight_tensor)
+            else:
+                print("Can only plot weights with three channels with single channel = False")
+
+    else:
+        print("Can only visualize layers which are convolutional")
+
+
+def plot_kernels(J, L, scattering):
     fig, axs = plt.subplots(J, L, sharex=True, sharey=True, )
     fig.set_figheight(5)
     fig.set_figwidth(12)
@@ -241,9 +243,9 @@ def plot_kernels(J,L,scattering):
         axs[i // L, i % L].imshow(colorize(filter_c))
         axs[i // L, i % L].axis('off')
         axs[i // L, i % L].set_title("$j = {}$ \n $\\theta={}$".format(i // L, i % L), fontsize=12)
-        i = i+1
+        i = i + 1
 
-    #plt.title('Wavelets')
+    # plt.title('Wavelets')
     plt.show()
 
     f = scattering.phi["levels"][0]
@@ -251,23 +253,25 @@ def plot_kernels(J,L,scattering):
     filter_c = np.fft.fftshift(filter_c)
     filter_c = np.abs(filter_c)
 
-    plt.figure(figsize=(5,5))
+    plt.figure(figsize=(5, 5))
     plt.imshow(filter_c, cmap='Greys')
     plt.grid(False)
     plt.title('Low-pass filter (scaling function)')
-    plt.imshow(np.log(filter_c), cmap='Greys'); plt.grid(False); plt.title('Low-pass filter (scaling function)')
-    #plt.style.use(['no-latex'])
+    plt.imshow(np.log(filter_c), cmap='Greys')
+    plt.grid(False)
+    plt.title('Low-pass filter (scaling function)')
+    # plt.style.use(['no-latex'])
     plt.show()
 
-def get_mean(data:list[np.ndarray],model_name:str) -> str:
 
+def get_mean(data: list[np.ndarray], ratio: float) -> str:
     r_mean_arr = []
     g_mean_arr = []
     b_mean_arr = []
 
-    for i in range(0,len(data)):
+    for i in range(0, len(data)):
         img_np = data[i]
-        r_mean,g_mean,b_mean = np.mean(img_np,axis=(0,1))
+        r_mean, g_mean, b_mean = np.mean(img_np, axis=(0, 1))
         r_mean_arr.append(r_mean)
         g_mean_arr.append(g_mean)
         b_mean_arr.append(b_mean)
@@ -276,23 +280,24 @@ def get_mean(data:list[np.ndarray],model_name:str) -> str:
     G_MEAN = np.mean(g_mean_arr) / 255
     B_MEAN = np.mean(b_mean_arr) / 255
 
-    RGB_df = pd.DataFrame(columns= ["R_MEAN","G_MEAN","B_MEAN"])
+    RGB_df = pd.DataFrame(columns=["R_MEAN", "G_MEAN", "B_MEAN"])
     RGB_df["R_MEAN"] = [R_MEAN]
     RGB_df["G_MEAN"] = [G_MEAN]
     RGB_df["B_MEAN"] = [B_MEAN]
 
-    df_name = f"./csv/{model_name}/RGB_mean_df.csv"
+    df_name = f"./csv/norm/RGB_mean_df_{ratio*100}.csv"
     RGB_df.to_csv(df_name)
     return df_name
 
-def get_std(data:list[np.ndarray],model_name:str) -> str:
+
+def get_std(data: list[np.ndarray], ratio: float) -> str:
     r_std_arr = []
     g_std_arr = []
     b_std_arr = []
 
-    for i in range(0,len(data)):
+    for i in range(0, len(data)):
         img_np = data[i]
-        r_std,g_std,b_std = np.std(img_np,axis=(0,1))
+        r_std, g_std, b_std = np.std(img_np, axis=(0, 1))
         r_std_arr.append(r_std)
         g_std_arr.append(g_std)
         b_std_arr.append(b_std)
@@ -301,13 +306,39 @@ def get_std(data:list[np.ndarray],model_name:str) -> str:
     G_STD = np.mean(g_std_arr) / 255
     B_STD = np.mean(b_std_arr) / 255
 
-    RGB_std_df = pd.DataFrame(columns= ["R_STD","G_STD","B_STD"])
+    RGB_std_df = pd.DataFrame(columns=["R_STD", "G_STD", "B_STD"])
     RGB_std_df["R_STD"] = [R_STD]
     RGB_std_df["G_STD"] = [G_STD]
     RGB_std_df["B_STD"] = [B_STD]
 
-    df_name = f"./csv/{model_name}/RGB_std_df.csv"
+    df_name = f"./csv/norm/RGB_std_df_{ratio*100}.csv"
     RGB_std_df.to_csv(df_name)
     return df_name
 
-    
+
+def normalization(data: list[np.ndarray], ratio: float = 1.0):
+    RGB_mean_path = get_mean(data, ratio)
+    RGB_mean_df = pd.read_csv(RGB_mean_path)
+    print("Red ch mean = ", RGB_mean_df.iloc[0].R_MEAN.item(), "\nGreen ch mean = ", RGB_mean_df.iloc[0].G_MEAN.item(),
+          "\nBlue ch mean = ", RGB_mean_df.iloc[0].B_MEAN.item())
+
+    RGB_std_path = get_std(data, ratio)
+    RGB_std_df = pd.read_csv(RGB_std_path)
+    print("Red ch std = ", RGB_std_df.iloc[0].R_STD.item(), "\nGreen ch std = ", RGB_std_df.iloc[0].G_STD.item(),
+          "\nBlue ch std = ", RGB_std_df.iloc[0].B_STD.item())
+
+    R_MEAN = RGB_mean_df.iloc[0].R_MEAN.item()
+    G_MEAN = RGB_mean_df.iloc[0].G_MEAN.item()
+    B_MEAN = RGB_mean_df.iloc[0].B_MEAN.item()
+    R_STD = RGB_std_df.iloc[0].R_STD.item()
+    G_STD = RGB_std_df.iloc[0].G_STD.item()
+    B_STD = RGB_std_df.iloc[0].B_STD.item()
+
+    data_transform = Compose([
+        ToPILImage(),
+        Resize(size=(128, 128)),
+        ToTensor(),
+        Normalize(mean=[R_MEAN, G_MEAN, B_MEAN], std=[R_STD, G_STD, B_STD])
+    ])
+
+    return data_transform
