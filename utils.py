@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from torchvision import utils
 from torch.utils.data import Dataset
+from datetime import datetime
 from colorsys import hls_to_rgb
 from scipy.fft import fft2
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
@@ -342,3 +343,69 @@ def normalization(data: list[np.ndarray], ratio: float = 1.0):
     ])
 
     return data_transform
+
+
+def plot_results(val_accuracies, train_losses, val_losses, f1_scores, model_name):
+
+    # PLOT - VALIDATION ACCURACY
+    acc_matrix = np.array(val_accuracies)
+    acc_max = np.max(acc_matrix, axis=0)
+    acc_min = np.min(acc_matrix, axis=0)
+    mean_acc = np.mean(acc_matrix, axis=0)
+
+    num_epochs = range(len(acc_min))
+    fig, ax = plt.subplots()
+    for idx, fold_acc in enumerate(acc_matrix):
+        ax.plot(num_epochs, fold_acc, '--', alpha=0.5, label=f"Fold n.{idx}")
+    ax.fill_between(num_epochs, acc_min, acc_max, color="grey", alpha=0.2)
+    ax.plot(num_epochs, mean_acc, '-', color="red", label='Mean Accuracy Between Folds') 
+    plt.ylim(0, 1)
+    plt.grid(False)
+    fig.legend(loc='outside upper right',ncol=2)
+
+    dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
+    acc_string = f"./models_trained/images/{model_name}_AccuracyFolds_{dt_string}.png"
+    fig.savefig(acc_string)
+
+    # PLOT - LEARNING CURVE 
+    train_matrix = np.array(train_losses)
+    train_max = np.max(train_matrix, axis=0)
+    train_min = np.min(train_matrix, axis=0)
+    mean_loss_train = np.mean(train_matrix, axis=0)
+
+    val_matrix = np.array(val_losses)
+    val_max = np.max(val_matrix, axis=0)
+    val_min = np.min(val_matrix, axis=0)
+    mean_loss_val = np.mean(val_matrix, axis=0)
+
+    fig, ax = plt.subplots()
+    ax.plot(num_epochs, mean_loss_train, '-', color="red", label='Mean Training Curve')
+    ax.fill_between(num_epochs, train_min, train_max, color="red", alpha=0.2)
+    ax.plot(num_epochs, mean_loss_val, '-', color="blue", label='Mean Validation Curve')
+    ax.fill_between(num_epochs, val_min, val_max, color="blue", alpha=0.2)
+    plt.ylim(0, max(val_max) + 1)
+    plt.grid(False)
+    fig.legend(loc='outside upper right')
+
+    dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
+    lc_string = f"./models_trained/images/{model_name}_LearningCurve_{dt_string}.png"
+    fig.savefig(lc_string)
+
+    # PLOT - F1
+    f1_matrix = np.array(f1_scores)
+    f1_max = np.max(f1_matrix, axis=0)
+    f1_min = np.min(f1_matrix, axis=0)
+    mean_f1 = np.mean(f1_matrix, axis=0)
+
+    fig, ax = plt.subplots()
+    for idx, fold_f1 in enumerate(f1_matrix):
+        ax.plot(num_epochs, fold_f1, '--', alpha=0.5, label=f"Fold n.{idx}")
+    ax.fill_between(num_epochs, f1_min, f1_max, color="grey", alpha=0.2)
+    ax.plot(num_epochs, mean_f1, '-', color="red", label='Mean F1 Score Folds') 
+    plt.ylim(0, max(f1_max) + 1)
+    plt.grid(False)
+    fig.legend(loc='outside upper right',ncol=2)
+
+    dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
+    f1_string = f"./models_trained/images/{model_name}_F1Folds_{dt_string}.png"
+    fig.savefig(f1_string)
