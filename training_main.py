@@ -253,7 +253,7 @@ def test(data_transform, test_data, test_labels, model, model_name, device):
     testloader = DataLoader(test_data, batch_size=64)
 
     model.eval()
-    pred_labels = []
+    pred_labels = torch.empty(size=(1,),dtype=torch.int8)
     with torch.no_grad():
         for batch, sample_batched in enumerate(testloader):
             X = sample_batched[0].to(device)
@@ -262,9 +262,9 @@ def test(data_transform, test_data, test_labels, model, model_name, device):
             y_pred = model(X)
 
             pred_label = y_pred.argmax(dim=1)
-            pred_labels.append(pred_label)
-
-    acc, f1_score = compute_metrics(test_labels, pred_labels, classes=['muffin', 'chihuahua'])
+            pred_labels = torch.cat((pred_labels, pred_label),0)
+    pred = torch.cat([pred_labels[1:]])
+    acc, f1_score = compute_metrics(test_labels, pred, classes=['muffin', 'chihuahua'])
 
     # dd/mm/YY H:M:S
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")

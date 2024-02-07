@@ -115,7 +115,7 @@ def colorize(z):
 
 
 # Function to visualize the kernels for the two convolutional layers
-def visTensor(tensor, ch=0, allkernels=False, nrow=8, padding=1):
+def visTensor(tensor, ch=0, allkernels=False, nrow=4, padding=1):
     n, c, w, h = tensor.shape
 
     if allkernels:
@@ -126,10 +126,10 @@ def visTensor(tensor, ch=0, allkernels=False, nrow=8, padding=1):
     rows = np.min((tensor.shape[0] // nrow + 1, 64))
     grid = utils.make_grid(tensor, nrow=nrow, normalize=True, padding=padding)
     plt.figure(figsize=(nrow, rows))
-    plt.imshow(grid.numpy().transpose((1, 2, 0)))
+    plt.imshow(grid.cpu().numpy().transpose((1, 2, 0)))
 
 
-def plot_filters_single_channel_big(t):
+def plot_filters_single_channel_big(t,model_name):
     # setting the rows and columns
     nrows = t.shape[0] * t.shape[2]
     ncols = t.shape[1] * t.shape[3]
@@ -142,9 +142,13 @@ def plot_filters_single_channel_big(t):
 
     fig, ax = plt.subplots(figsize=(ncols / 10, nrows / 200))
     imgplot = sns.heatmap(npimg, xticklabels=False, yticklabels=False, cmap='gray', ax=ax, cbar=False)
+    fig = imgplot.get_figure()
+    dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
+    fig_string = f"./models_trained/images/{model_name}_SingleChannelBig_{dt_string}.png"
+    fig.savefig(fig_string)
 
 
-def plot_filters_single_channel(t):
+def plot_filters_single_channel(t,model_name):
     # kernels depth * number of kernels
     nplots = t.shape[0] * t.shape[1]
     ncols = 12
@@ -171,10 +175,12 @@ def plot_filters_single_channel(t):
             ax1.set_yticklabels([])
 
     plt.tight_layout()
-    plt.show()
+    dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
+    fig_string = f"./models_trained/images/{model_name}_SingleChannel_{dt_string}.png"
+    fig.savefig(fig_string)
 
 
-def plot_filters_multi_channel(t):
+def plot_filters_multi_channel(t,model_name):
     # get the number of kernels
     num_kernels = t.shape[0]
 
@@ -204,10 +210,13 @@ def plot_filters_multi_channel(t):
 
     plt.savefig('myimage.png', dpi=100)
     plt.tight_layout()
-    plt.show()
+    dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
+    fig_string = f"./models_trained/images/{model_name}_MultiChannel_{dt_string}.png"
+    fig.savefig(fig_string)
 
 
-def plot_weights(model_layer, single_channel=True, collated=False):
+
+def plot_weights(model_layer, single_channel=True, collated=False, model_name='CNN'):
     # extracting the model features at the particular layer number
     layer = model_layer
 
@@ -218,13 +227,13 @@ def plot_weights(model_layer, single_channel=True, collated=False):
 
         if single_channel:
             if collated:
-                plot_filters_single_channel_big(weight_tensor)
+                plot_filters_single_channel_big(weight_tensor, model_name)
             else:
-                plot_filters_single_channel(weight_tensor)
+                plot_filters_single_channel(weight_tensor, model_name)
 
         else:
             if weight_tensor.shape[1] == 3:
-                plot_filters_multi_channel(weight_tensor)
+                plot_filters_multi_channel(weight_tensor, model_name)
             else:
                 print("Can only plot weights with three channels with single channel = False")
 
@@ -232,7 +241,7 @@ def plot_weights(model_layer, single_channel=True, collated=False):
         print("Can only visualize layers which are convolutional")
 
 
-def plot_kernels(J, L, scattering):
+def plot_kernels(J, L, scattering, model_name):
     fig, axs = plt.subplots(J, L, sharex=True, sharey=True, )
     fig.set_figheight(5)
     fig.set_figwidth(12)
@@ -246,8 +255,9 @@ def plot_kernels(J, L, scattering):
         axs[i // L, i % L].set_title("$j = {}$ \n $\\theta={}$".format(i // L, i % L), fontsize=12)
         i = i + 1
 
-    # plt.title('Wavelets')
-    plt.show()
+    dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
+    fig_string = f"./models_trained/images/{model_name}_Kernels_{dt_string}.png"
+    fig.savefig(fig_string)
 
     f = scattering.phi["levels"][0]
     filter_c = fft2(f)
@@ -261,8 +271,9 @@ def plot_kernels(J, L, scattering):
     plt.imshow(np.log(filter_c), cmap='Greys')
     plt.grid(False)
     plt.title('Low-pass filter (scaling function)')
-    # plt.style.use(['no-latex'])
-    plt.show()
+    dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
+    fig_string = f"./models_trained/images/{model_name}_Wavelets_{dt_string}.png"
+    fig.savefig(fig_string)
 
 
 def get_mean(data: list[np.ndarray], ratio: float) -> str:
@@ -409,3 +420,57 @@ def plot_results(val_accuracies, train_losses, val_losses, f1_scores, model_name
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
     f1_string = f"./models_trained/images/{model_name}_F1Folds_{dt_string}.png"
     fig.savefig(f1_string)
+
+def filter_extraction(model, data_transform, model_name):
+    print('Filter extraction')
+    image = cv2.imread('data/test/chihuahua/5101311705_3e5526d521_o.jpg')
+    print('Chosen image: 5101311705_3e5526d521_o.jpg')
+
+    model_weights =[]
+    conv_layers = []
+    model_children = list(model.children())
+
+    counter = 0
+    for i in range(len(model_children)):
+        if type(model_children[i]) == torch.nn.Conv2d:
+            counter+=1
+            model_weights.append(model_children[i].weight)
+            conv_layers.append(model_children[i])
+    print(f"Total convolution layers: {counter}")
+
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model_CNN = model.to(device)
+
+    image = data_transform(image)
+    print(f"Image shape before: {image.shape}")
+    image = image.unsqueeze(0)
+    print(f"Image shape after: {image.shape}")
+    image = image.to(device)
+
+    outputs = []
+    names = []
+    for layer in conv_layers[0:]:   
+        image = layer(image)
+        outputs.append(image) 
+        names.append(str(layer))   
+
+    processed = []
+    for feature_map in outputs:
+        feature_map = feature_map.squeeze(0)
+        gray_scale = torch.sum(feature_map,0)
+        gray_scale = gray_scale / feature_map.shape[0]
+        processed.append(gray_scale.data.cpu().numpy())
+
+    fig = plt.figure(figsize=(20, 40))
+    for i in range(len(processed)):
+        a = fig.add_subplot(5, 4, i+1)
+        imgplot = plt.imshow(processed[i],cmap='Greys')
+        a.axis("off")
+        a.set_title(names[i].split('(')[0], fontsize=30)
+    dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
+    f1_string = f"./models_trained/images/{model_name}_Kernels_{dt_string}.png"
+    fig.savefig(f1_string)
+
+    visTensor(model_weights[0], ch=0, allkernels=False)
+
+    plot_weights(model_children[0], single_channel = True, collated = False, model_name = model_name)
