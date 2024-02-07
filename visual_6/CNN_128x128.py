@@ -23,13 +23,12 @@ class CNN_128x128(nn.Module):
         self.conv2 = nn.Conv2d(in_channels=self.channels[0],out_channels=self.channels[1],kernel_size=(9),stride=(1))
         self.conv3 = nn.Conv2d(in_channels=self.channels[1],out_channels=self.channels[2],kernel_size=(5),stride=(1))
         self.conv4 = nn.Conv2d(in_channels=self.channels[2],out_channels=self.channels[3],kernel_size=(5),stride=(1))
-        self.drop1 = nn.Dropout1d(p=0.1)
 
         # Flatten layer (from ConvLayer to fully-connected)
         self.flat = nn.Flatten()
 
         self.fc1 = nn.Linear(576,256)
-        self.drop2 = nn.Dropout(p=0.1)
+        self.drop = nn.Dropout(p=0.1)
         self.fc2 = nn.Linear(256,32)
         self.fc3 = nn.Linear(32,self.num_classes)
         
@@ -46,7 +45,7 @@ class CNN_128x128(nn.Module):
         # FC phase
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        x = self.drop2(x)
+        x = self.drop(x)
 
         x = self.fc3(x)
 
