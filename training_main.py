@@ -10,7 +10,7 @@ from tqdm.auto import tqdm
 from timeit import default_timer as timer
 from kymatio.torch import Scattering2D
 from ScatNet import ScatNet2D
-from CNN_128x128 import CNN_128x128
+from CNN import CNN
 from datetime import datetime
 from sklearn.metrics import f1_score
 
@@ -174,7 +174,7 @@ def training_main(data_transform, train_data, train_labels, base_model: str):
 
         # Instance of the model
         if base_model == 'CNN':
-            app_model = CNN_128x128(input_channel=3, num_classes=n_classes).to(device)
+            app_model = CNN(input_channel=3, num_classes=n_classes).to(device)
             lr = 0.001
         elif base_model == 'ScatNet':
             L = 8
@@ -182,7 +182,7 @@ def training_main(data_transform, train_data, train_labels, base_model: str):
             scattering = Scattering2D(J=J, shape=(128, 128), L=L)
             K = 81  # Input channels for the ScatNet
             scattering = scattering.to(device)
-            app_model = ScatNet2D(input_channels=K, scattering=scattering).to(device)
+            app_model = ScatNet2D(input_channels=K, scattering=scattering, num_classes=n_classes).to(device)
             lr = 0.0001
         else:
             print('Model not recognized, terminating program.')
