@@ -208,7 +208,6 @@ def plot_filters_multi_channel(t,model_name):
         ax1.set_xticklabels([])
         ax1.set_yticklabels([])
 
-    plt.savefig('myimage.png', dpi=100)
     plt.tight_layout()
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
     fig_string = f"./models_trained/images/{model_name}_MultiChannel_{dt_string}.png"
