@@ -5,7 +5,7 @@ import matplotlib as plt
 from utils import data_loading, normalization, filter_extraction
 import cv2
 
-if __name__ == "__main__":
+if __name__ == "__main__":\
 
     MODEL_NAME = 'CNN'
     # LOAD DATA
