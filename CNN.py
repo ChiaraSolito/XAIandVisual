@@ -18,10 +18,10 @@ class CNN(nn.Module):
         self.channels = [32, 32, 64, 64]
 
         # Convolutional layers
-        self.conv1 = nn.Conv2d(in_channels=self.input_ch, out_channels=self.channels[0], kernel_size=(9,), stride=(1,))
-        self.conv2 = nn.Conv2d(in_channels=self.channels[0], out_channels=self.channels[1], kernel_size=(9,), stride=(1,))
-        self.conv3 = nn.Conv2d(in_channels=self.channels[1], out_channels=self.channels[2], kernel_size=(5,), stride=(1,))
-        self.conv4 = nn.Conv2d(in_channels=self.channels[2], out_channels=self.channels[3], kernel_size=(5,), stride=(1,))
+        self.conv1 = nn.Conv2d(in_channels=self.input_ch, out_channels=self.channels[0], kernel_size=(9), stride=(1))
+        self.conv2 = nn.Conv2d(in_channels=self.channels[0], out_channels=self.channels[1], kernel_size=(9), stride=(1))
+        self.conv3 = nn.Conv2d(in_channels=self.channels[1], out_channels=self.channels[2], kernel_size=(5), stride=(1))
+        self.conv4 = nn.Conv2d(in_channels=self.channels[2], out_channels=self.channels[3], kernel_size=(5), stride=(1))
 
         # Flatten layer (from ConvLayer to fully-connected)
         self.flat = nn.Flatten()
