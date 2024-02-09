@@ -4,7 +4,7 @@ import pandas as pd
 import torch
 from torch.nn import CrossEntropyLoss
 from torch.utils.data import DataLoader
-from utils import CustomDataset, compute_metrics, plot_results
+from utils import CustomDataset, compute_metrics, plot_results, plot_kernels
 from sklearn.model_selection import StratifiedKFold
 from tqdm.auto import tqdm
 from timeit import default_timer as timer
@@ -176,6 +176,7 @@ def training_main(data_transform, train_data, train_labels, base_model: str):
         if base_model == 'CNN':
             app_model = CNN(input_channel=3, num_classes=n_classes).to(device)
             lr = 0.001
+            kernels = False
         elif base_model == 'ScatNet':
             L = 8
             J = 2
@@ -184,6 +185,7 @@ def training_main(data_transform, train_data, train_labels, base_model: str):
             scattering = scattering.to(device)
             app_model = ScatNet2D(input_channels=K, scattering=scattering, num_classes=n_classes).to(device)
             lr = 0.0001
+            kernels = True
         else:
             print('Model not recognized, terminating program.')
             exit()
@@ -234,6 +236,9 @@ def training_main(data_transform, train_data, train_labels, base_model: str):
         f1_scores[i] = (pd.read_csv(results_string)["val_f1"]).to_list()
 
     plot_results(val_accuracies, train_losses, val_losses, f1_scores, base_model)
+
+    if kernels:
+        plot_kernels(J,L,scattering,base_model)
 
     index = np.argmax(max_val_accuracies)
 
