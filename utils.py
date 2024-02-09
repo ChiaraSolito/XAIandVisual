@@ -118,6 +118,7 @@ def colorize(z):
 def visTensor(tensor, ch=0, allkernels=False, nrow=4, padding=1):
     n, c, w, h = tensor.shape
 
+    #grey vs color
     if allkernels:
         tensor = tensor.view(n * c, -1, w, h)
     elif c != 3:
@@ -467,7 +468,7 @@ def filter_extraction(model, data_transform, model_name):
         a.axis("off")
         a.set_title(names[i].split('(')[0], fontsize=30)
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
-    f1_string = f"./models_trained/images/{model_name}_Kernels_{dt_string}.png"
+    f1_string = f"./models_trained/images/{model_name}_FeatureMap_{dt_string}.png"
     fig.savefig(f1_string)
 
     visTensor(model_weights[0], ch=0, allkernels=False)
