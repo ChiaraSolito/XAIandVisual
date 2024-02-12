@@ -241,6 +241,7 @@ def plot_weights(model_layer, single_channel=True, collated=False, model_name='C
         print("Can only visualize layers which are convolutional")
 
 
+# visualizzare tutti i filtri che sono presenti negli N banchi di filtri che avete creato
 def plot_kernels(J, L, scattering, model_name):
     fig, axs = plt.subplots(J, L, sharex=True, sharey=True, )
     fig.set_figheight(5)
@@ -446,7 +447,7 @@ def filter_extraction(model, data_transform, model_name):
     image = image.unsqueeze(0)
     print(f"Image shape after: {image.shape}")
     image = image.to(device)
-
+    
     outputs = []
     names = []
     for layer in conv_layers[0:]:   
