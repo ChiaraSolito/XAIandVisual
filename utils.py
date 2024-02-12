@@ -72,30 +72,33 @@ class CustomDataset(Dataset):
         return sample
 
 
-def compute_metrics(y_true, y_pred, classes):
+def compute_metrics(y_true, y_pred, classes, model_name):
     """
     Compute the metrics: accuracy, confusion matrix, F1 score.\n
     Args:
         y_true: true labels
         y_pred: predicted probabilities for each class
         classes: list of the classes
+        model_name: model name
     """
 
     # Accuracy
-    acc = accuracy_score(y_true, y_pred[0].numpy())
+    acc = accuracy_score(y_true, y_pred.numpy())
 
     # F1 score
-    f1score = f1_score(y_true, y_pred[0].numpy())
+    f1score = f1_score(y_true, y_pred.numpy())
 
     # Confusion matrix
-    conf_mat = confusion_matrix(y_true, y_pred[0].numpy(), labels=list(range(0, len(classes))))
+    conf_mat = confusion_matrix(y_true, y_pred.numpy(), labels=list(range(0, len(classes))))
     conf_mat_df = pd.DataFrame(conf_mat, columns=classes, index=classes)
     plt.figure(figsize=(7, 5))
     sns.heatmap(conf_mat_df, annot=True)
     plt.title('confusion matrix: test set')
     plt.xlabel('predicted')
     plt.ylabel('true')
-    #plt.show()
+    dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
+    fig_string = f"./models_trained/images/{model_name}_ConfusionMatrix_{dt_string}.png"
+    plt.savefig(fig_string)
 
     return acc, f1score
 
@@ -115,7 +118,7 @@ def colorize(z):
 
 
 # Function to visualize the kernels for the two convolutional layers
-def visTensor(tensor, ch=0, allkernels=False, nrow=4, padding=1):
+def visTensor(tensor, model_name, ch=0, allkernels=False, nrow=4, padding=1):
     n, c, w, h = tensor.shape
 
     #grey vs color
@@ -128,6 +131,9 @@ def visTensor(tensor, ch=0, allkernels=False, nrow=4, padding=1):
     grid = utils.make_grid(tensor, nrow=nrow, normalize=True, padding=padding)
     plt.figure(figsize=(nrow, rows))
     plt.imshow(grid.cpu().numpy().transpose((1, 2, 0)))
+    dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
+    f1_string = f"./models_trained/images/{model_name}_visTensor_{dt_string}.png"
+    plt.savefig(f1_string)
 
 
 def plot_filters_single_channel_big(t,model_name):
@@ -424,8 +430,8 @@ def plot_results(val_accuracies, train_losses, val_losses, f1_scores, model_name
 
 def filter_extraction(model, data_transform, model_name):
     print('Filter extraction')
-    image = cv2.imread('data/test/chihuahua/5101311705_3e5526d521_o.jpg')
-    print('Chosen image: 5101311705_3e5526d521_o.jpg')
+    image = cv2.imread('data/test/chihuahua/img_0_8.jpg')
+    print('data/test/chihuahua/img_0_8.jpg')
 
     model_weights =[]
     conv_layers = []
@@ -472,6 +478,6 @@ def filter_extraction(model, data_transform, model_name):
     f1_string = f"./models_trained/images/{model_name}_FeatureMap_{dt_string}.png"
     fig.savefig(f1_string)
 
-    visTensor(model_weights[0], ch=0, allkernels=False)
+    visTensor(model_weights[0], model_name=model_name, ch=0, allkernels=False)
 
-    plot_weights(model_children[0], single_channel = True, collated = False, model_name = model_name)
+    plot_weights(model_children[0], single_channel=True, collated=False, model_name = model_name)

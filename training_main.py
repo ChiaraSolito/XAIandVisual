@@ -268,8 +268,9 @@ def test(data_transform, test_data, test_labels, model, model_name, device):
 
             pred_label = y_pred.argmax(dim=1)
             pred_labels = torch.cat((pred_labels, pred_label),0)
+
     pred = torch.cat([pred_labels[1:]])
-    acc, f1_score = compute_metrics(test_labels, pred, classes=['muffin', 'chihuahua'])
+    acc, f1_score = compute_metrics(test_labels, pred, classes=['muffin', 'chihuahua'], model_name=model_name)
 
     # dd/mm/YY H:M:S
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
