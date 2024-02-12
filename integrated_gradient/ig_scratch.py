@@ -1,16 +1,8 @@
-
-
-
-
 import torch
-from CNN_128x128 import CNN_128x128
-import cv2
-import numpy as np
-from torchvision.transforms import ToTensor, Compose, Resize, ToPILImage, Normalize
+from CNN import CNN
+from torchvision.transforms import ToTensor, Compose, Resize
 import matplotlib.pyplot as plt
-
 from PIL import Image
-
 from captum.attr import IntegratedGradients
 
 
@@ -69,7 +61,7 @@ def plot_train_label(image, mask):
     plt.show()
 
 def load_model_and_data():
-    model = CNN_128x128(3, 2)
+    model = CNN(3, 2)
     model.load_state_dict(torch.load('model_CNN.pt'))
 
     img_name = '01.jpg'
