@@ -27,7 +27,7 @@ class CNN(nn.Module):
         self.flat = nn.Flatten()
 
         # Fully connected
-        self.fc1 = nn.Linear(576, 256)
+        self.fc1 = nn.Linear(4096, 256)
         self.drop = nn.Dropout(p=0.1)
         self.fc2 = nn.Linear(256, 32)
         self.fc3 = nn.Linear(32, self.num_classes)
@@ -49,3 +49,5 @@ class CNN(nn.Module):
 
         # x = torch.softmax(self.fc3(x),dim=1)
         return x
+
+

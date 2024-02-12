@@ -197,8 +197,9 @@ def training_main(data_transform, train_data, train_labels, base_model: str):
         val_data_fold = CustomDataset([train_data[x] for x in val_idx[i]], [train_labels[x] for x in val_idx[i]],
                                       transform=data_transform)
 
-        trainloader = DataLoader(train_data_fold, batch_size=64)  # da adattare numero batch size
+        trainloader = DataLoader(train_data_fold, batch_size=64, shuffle=True)
         validationloader = DataLoader(val_data_fold, batch_size=64)
+
 
         start_time = timer()
 

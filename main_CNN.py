@@ -19,8 +19,8 @@ if __name__ == "__main__":\
     model = training_main(data_transform, train_data, train_labels, MODEL_NAME)
 
     # TESTING
-    # acc = test(data_transform, test_data, test_labels, model, MODEL_NAME, device='cpu')
-    # print("Accuracy", acc)
+    acc = test(data_transform, test_data, test_labels, model, MODEL_NAME, device='cpu')
+    print("Accuracy", acc)
 
     # EXTRACTION OF FILTERS
     filter_extraction(model, data_transform, MODEL_NAME)
