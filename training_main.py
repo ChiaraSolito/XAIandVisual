@@ -163,7 +163,7 @@ def training_main(data_transform, train_data, train_labels, base_model: str):
     train_splits, val_splits, train_idx, val_idx = stratified_kfold(train_data, train_labels, base_model)
 
     # TRAINING
-    num_epochs = 5
+    num_epochs = 30
     n_classes = 2
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -268,9 +268,8 @@ def test(data_transform, test_data, test_labels, model, model_name, device):
 
             pred_label = y_pred.argmax(dim=1)
             pred_labels = torch.cat((pred_labels, pred_label),0)
-
     pred = torch.cat([pred_labels[1:]])
-    acc, f1_score = compute_metrics(test_labels, pred, classes=['muffin', 'chihuahua'], model_name=model_name)
+    acc, f1_score = compute_metrics(test_labels, pred, classes=['meningioma', 'notumor'])
 
     # dd/mm/YY H:M:S
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")

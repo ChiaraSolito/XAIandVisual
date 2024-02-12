@@ -30,26 +30,26 @@ def data_loading(path_train: str,
                                           list[np.ndarray],  # test_images
                                           np.ndarray]:  # test_labels
 
-    n_muffins_train = len(os.listdir(path_train + "muffin"))  # 2174
-    n_muffins_test = len(os.listdir(path_test + "muffin"))  # 544
-    n_chihuahua_train = len(os.listdir(path_train + "chihuahua"))  # 2559
-    n_chihuahua_test = len(os.listdir(path_test + "chihuahua"))  # 640
+    n_meningiomas_train = len(os.listdir(path_train + "meningioma"))  # 2174
+    n_meningiomas_test = len(os.listdir(path_test + "meningioma"))  # 544
+    n_notumor_train = len(os.listdir(path_train + "notumor"))  # 2559
+    n_notumor_test = len(os.listdir(path_test + "notumor"))  # 640
 
-    # Define train and test labels - 0 muffins, 1 chihuahua
-    train_labels = np.zeros(n_muffins_train + n_chihuahua_train)
-    train_labels[n_muffins_train:] = 1
-    test_labels = np.zeros(n_muffins_test + n_chihuahua_test)
-    test_labels[n_muffins_test:] = 1
+    # Define train and test labels - 0 meningiomas, 1 notumor
+    train_labels = np.zeros(n_meningiomas_train + n_notumor_train)
+    train_labels[n_meningiomas_train:] = 1
+    test_labels = np.zeros(n_meningiomas_test + n_notumor_test)
+    test_labels[n_meningiomas_test:] = 1
     train_labels = train_labels.astype('uint8')
     test_labels = test_labels.astype('uint8')
 
     # Load train set
-    train_data = [cv2.imread(file) for file in glob.glob(path_train + 'muffin/*.jpg')]
-    train_data.extend(cv2.imread(file) for file in glob.glob(path_train + 'chihuahua/*.jpg'))
+    train_data = [cv2.imread(file) for file in glob.glob(path_train + 'meningioma/*.jpg')]
+    train_data.extend(cv2.imread(file) for file in glob.glob(path_train + 'notumor/*.jpg'))
 
     # Load test set
-    test_data = [cv2.imread(file) for file in glob.glob(path_test + '/muffin/*.jpg')]
-    test_data.extend(cv2.imread(file) for file in glob.glob(path_test + '/chihuahua/*.jpg'))
+    test_data = [cv2.imread(file) for file in glob.glob(path_test + '/meningioma/*.jpg')]
+    test_data.extend(cv2.imread(file) for file in glob.glob(path_test + '/notumor/*.jpg'))
 
     return train_data, train_labels, test_data, test_labels
 
@@ -72,33 +72,30 @@ class CustomDataset(Dataset):
         return sample
 
 
-def compute_metrics(y_true, y_pred, classes, model_name):
+def compute_metrics(y_true, y_pred, classes):
     """
     Compute the metrics: accuracy, confusion matrix, F1 score.\n
     Args:
         y_true: true labels
         y_pred: predicted probabilities for each class
         classes: list of the classes
-        model_name: model name
     """
 
     # Accuracy
-    acc = accuracy_score(y_true, y_pred.numpy())
+    acc = accuracy_score(y_true, y_pred[0].numpy())
 
     # F1 score
-    f1score = f1_score(y_true, y_pred.numpy())
+    f1score = f1_score(y_true, y_pred[0].numpy())
 
     # Confusion matrix
-    conf_mat = confusion_matrix(y_true, y_pred.numpy(), labels=list(range(0, len(classes))))
+    conf_mat = confusion_matrix(y_true, y_pred[0].numpy(), labels=list(range(0, len(classes))))
     conf_mat_df = pd.DataFrame(conf_mat, columns=classes, index=classes)
     plt.figure(figsize=(7, 5))
     sns.heatmap(conf_mat_df, annot=True)
     plt.title('confusion matrix: test set')
     plt.xlabel('predicted')
     plt.ylabel('true')
-    dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
-    fig_string = f"./models_trained/images/{model_name}_ConfusionMatrix_{dt_string}.png"
-    plt.savefig(fig_string)
+    #plt.show()
 
     return acc, f1score
 
@@ -118,7 +115,7 @@ def colorize(z):
 
 
 # Function to visualize the kernels for the two convolutional layers
-def visTensor(tensor, model_name, ch=0, allkernels=False, nrow=4, padding=1):
+def visTensor(tensor, ch=0, allkernels=False, nrow=4, padding=1):
     n, c, w, h = tensor.shape
 
     #grey vs color
@@ -131,9 +128,6 @@ def visTensor(tensor, model_name, ch=0, allkernels=False, nrow=4, padding=1):
     grid = utils.make_grid(tensor, nrow=nrow, normalize=True, padding=padding)
     plt.figure(figsize=(nrow, rows))
     plt.imshow(grid.cpu().numpy().transpose((1, 2, 0)))
-    dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
-    f1_string = f"./models_trained/images/{model_name}_visTensor_{dt_string}.png"
-    plt.savefig(f1_string)
 
 
 def plot_filters_single_channel_big(t,model_name):
@@ -430,8 +424,8 @@ def plot_results(val_accuracies, train_losses, val_losses, f1_scores, model_name
 
 def filter_extraction(model, data_transform, model_name):
     print('Filter extraction')
-    image = cv2.imread('data/test/chihuahua/img_0_8.jpg')
-    print('data/test/chihuahua/img_0_8.jpg')
+    image = cv2.imread('data/test/notumor/5101311705_3e5526d521_o.jpg')
+    print('Chosen image: 5101311705_3e5526d521_o.jpg')
 
     model_weights =[]
     conv_layers = []
@@ -478,6 +472,6 @@ def filter_extraction(model, data_transform, model_name):
     f1_string = f"./models_trained/images/{model_name}_FeatureMap_{dt_string}.png"
     fig.savefig(f1_string)
 
-    visTensor(model_weights[0], model_name=model_name, ch=0, allkernels=False)
+    visTensor(model_weights[0], ch=0, allkernels=False)
 
-    plot_weights(model_children[0], single_channel=True, collated=False, model_name = model_name)
+    plot_weights(model_children[0], single_channel = True, collated = False, model_name = model_name)
