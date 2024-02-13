@@ -13,6 +13,7 @@ from colorsys import hls_to_rgb
 from scipy.fft import fft2
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
 from torchvision.transforms import ToTensor, Compose, Resize, ToPILImage, Normalize
+from sklearn.metrics import ConfusionMatrixDisplay
 
 # Style for chart
 sns.set_style('darkgrid')
@@ -90,14 +91,16 @@ def compute_metrics(y_true, y_pred, classes, model_name):
 
     # Confusion matrix
     conf_mat = confusion_matrix(y_true, y_pred.numpy(), labels=list(range(0, len(classes))))
-    conf_mat_df = pd.DataFrame(conf_mat, columns=classes, index=classes)
     plt.figure(figsize=(7, 5))
-    sns.heatmap(conf_mat_df, annot=True)
+    disp = ConfusionMatrixDisplay(confusion_matrix=conf_mat, display_labels=classes)
+    disp.plot()
     plt.title('confusion matrix: test set')
     plt.xlabel('predicted')
     plt.ylabel('true')
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
     plot_string = f"./models_trained/images/{model_name}_ConfusionMatrix_{dt_string}.png"
+    plt.tick_params(axis=u'both', which=u'both',length=0)
+    plt.grid(b=None)
     plt.savefig(plot_string)
 
     return acc, f1score
@@ -372,14 +375,15 @@ def plot_results(val_accuracies, train_losses, val_losses, f1_scores, model_name
     mean_acc = np.mean(acc_matrix, axis=0)
 
     num_epochs = range(len(acc_min))
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(15, 15))
     for idx, fold_acc in enumerate(acc_matrix):
         ax.plot(num_epochs, fold_acc, '--', alpha=0.5, label=f"Fold n.{idx}")
     ax.fill_between(num_epochs, acc_min, acc_max, color="grey", alpha=0.2)
-    ax.plot(num_epochs, mean_acc, '-', color="red", label='Mean Accuracy Between Folds') 
-    plt.ylim(0, 1)
+
+    ax.plot(num_epochs, mean_acc, '-', color="red", label='Mean Accuracy Between Folds')
+    plt.ylim([min(acc_min) - 0.1, max(acc_max) + 0.1])
     plt.grid(False)
-    fig.legend(loc='outside upper right',ncol=2)
+    fig.legend(loc='outside upper center',ncol=2)
 
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
     acc_string = f"./models_trained/images/{model_name}_AccuracyFolds_{dt_string}.png"
@@ -396,14 +400,14 @@ def plot_results(val_accuracies, train_losses, val_losses, f1_scores, model_name
     val_min = np.min(val_matrix, axis=0)
     mean_loss_val = np.mean(val_matrix, axis=0)
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(15, 15))
     ax.plot(num_epochs, mean_loss_train, '-', color="red", label='Mean Training Curve')
     ax.fill_between(num_epochs, train_min, train_max, color="red", alpha=0.2)
     ax.plot(num_epochs, mean_loss_val, '-', color="blue", label='Mean Validation Curve')
     ax.fill_between(num_epochs, val_min, val_max, color="blue", alpha=0.2)
-    plt.ylim(0, max(val_max) + 1)
+    plt.ylim([min(val_min) - 0.1, max(val_max) + 0.1])
     plt.grid(False)
-    fig.legend(loc='outside upper right')
+    fig.legend(loc='outside upper center')
 
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
     lc_string = f"./models_trained/images/{model_name}_LearningCurve_{dt_string}.png"
@@ -415,14 +419,14 @@ def plot_results(val_accuracies, train_losses, val_losses, f1_scores, model_name
     f1_min = np.min(f1_matrix, axis=0)
     mean_f1 = np.mean(f1_matrix, axis=0)
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(15, 15))
     for idx, fold_f1 in enumerate(f1_matrix):
         ax.plot(num_epochs, fold_f1, '--', alpha=0.5, label=f"Fold n.{idx}")
     ax.fill_between(num_epochs, f1_min, f1_max, color="grey", alpha=0.2)
     ax.plot(num_epochs, mean_f1, '-', color="red", label='Mean F1 Score Folds') 
-    plt.ylim(0, max(f1_max) + 1)
+    plt.ylim([min(f1_min), max(f1_max)])
     plt.grid(False)
-    fig.legend(loc='outside upper right',ncol=2)
+    fig.legend(loc='outside upper center',ncol=2)
 
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
     f1_string = f"./models_trained/images/{model_name}_F1Folds_{dt_string}.png"

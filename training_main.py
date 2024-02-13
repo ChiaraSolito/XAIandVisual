@@ -163,7 +163,7 @@ def training_main(data_transform, train_data, train_labels, base_model: str):
     train_splits, val_splits, train_idx, val_idx = stratified_kfold(train_data, train_labels, base_model)
 
     # TRAINING
-    num_epochs = 3
+    num_epochs = 20
     n_classes = 2
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -223,20 +223,20 @@ def training_main(data_transform, train_data, train_labels, base_model: str):
         results_df.to_csv(results_df_name)
 
     max_val_accuracies = np.zeros([NUM_FOLD, 1])
-    val_accuracies = np.zeros([NUM_FOLD, num_epochs])
-    train_losses = np.zeros([NUM_FOLD, num_epochs])
-    val_losses = np.zeros([NUM_FOLD, num_epochs])
-    f1_scores = np.zeros([NUM_FOLD,num_epochs])
+    # val_accuracies = np.zeros([NUM_FOLD, num_epochs])
+    # train_losses = np.zeros([NUM_FOLD, num_epochs])
+    # val_losses = np.zeros([NUM_FOLD, num_epochs])
+    # f1_scores = np.zeros([NUM_FOLD,num_epochs])
 
     for i in range(NUM_FOLD):
         results_string = f"./csv/{base_model}/results_df_" + str(i) + ".csv"
         max_val_accuracies[i] = np.max(pd.read_csv(results_string)["val_acc"])
-        val_accuracies[i] = (pd.read_csv(results_string)["val_acc"]).to_list()
-        val_losses[i] = (pd.read_csv(results_string)["val_loss"]).to_list()
-        train_losses[i] = (pd.read_csv(results_string)["train_loss"]).to_list()
-        f1_scores[i] = (pd.read_csv(results_string)["val_f1"]).to_list()
+        # val_accuracies[i] = (pd.read_csv(results_string)["val_acc"]).to_list()
+        # val_losses[i] = (pd.read_csv(results_string)["val_loss"]).to_list()
+        # train_losses[i] = (pd.read_csv(results_string)["train_loss"]).to_list()
+        # f1_scores[i] = (pd.read_csv(results_string)["val_f1"]).to_list()
 
-    plot_results(val_accuracies, train_losses, val_losses, f1_scores, base_model)
+    # plot_results(val_accuracies, train_losses, val_losses, f1_scores, base_model)
 
     if kernels:
         plot_kernels(J,L,scattering,base_model)
@@ -252,6 +252,7 @@ def training_main(data_transform, train_data, train_labels, base_model: str):
         parameter.requires_grad = False
 
     return best_model
+
 
 
 def test(data_transform, test_data, test_labels, model, model_name, device):
