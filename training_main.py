@@ -92,7 +92,7 @@ def val_step(model: torch.nn.Module,
 
             val_pred_labels = val_pred_logits.argmax(dim=1)
             val_acc += ((val_pred_labels == y).sum().item() / len(val_pred_labels))
-            val_f1 = f1_score(y.cpu().numpy(), val_pred_labels.cpu().numpy())
+            val_f1 += f1_score(y.cpu().numpy(), val_pred_labels.cpu().numpy())
 
     val_loss = val_loss / len(dataloader)
     val_acc = val_acc / len(dataloader)
@@ -227,9 +227,8 @@ def training_main(data_transform, train_data, train_labels, base_model: str):
     # val_losses = np.zeros([NUM_FOLD, num_epochs])
     # f1_scores = np.zeros([NUM_FOLD,num_epochs])
 
-    dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
     for i in range(NUM_FOLD):
-        results_string = f"./csv/{base_model}/results_df_" + str(i) + "_" + dt_string + ".csv"
+        results_string = f"./csv/{base_model}/results_df_" + str(i) + ".csv"
         max_val_accuracies[i] = np.max(pd.read_csv(results_string)["val_acc"])
         # val_accuracies[i] = (pd.read_csv(results_string)["val_acc"]).to_list()
         # val_losses[i] = (pd.read_csv(results_string)["val_loss"]).to_list()
@@ -242,7 +241,7 @@ def training_main(data_transform, train_data, train_labels, base_model: str):
         plot_kernels(J, L, scattering, base_model)
 
     index = np.argmax(max_val_accuracies)
-    model_string = f"./models_trained/{base_model}/checkpoint_" + str(index) + "_" + dt_string + ".pth"
+    model_string = f"./models_trained/{base_model}/checkpoint_" + str(index) + ".pth"
     checkpoint = torch.load(model_string, map_location=torch.device("cpu"))
     best_model = app_model
     best_model.load_state_dict(checkpoint["model_state_dict"])
