@@ -198,7 +198,7 @@ def training_main(data_transform, train_data, train_labels, base_model: str):
                                       transform=data_transform)
 
         trainloader = DataLoader(train_data_fold, batch_size=64, shuffle=True)
-        validationloader = DataLoader(val_data_fold, batch_size=64)
+        validationloader = DataLoader(val_data_fold, batch_size=64, shuffle=True)
 
         start_time = timer()
 
