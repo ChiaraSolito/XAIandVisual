@@ -65,6 +65,23 @@ if __name__ == "__main__":
         cnn_accuracies.append(CNNacc)
         scatnet_accuracies.append(ScatNetacc)
 
+    print('*********************')
+    print('CNN ACC')
+    print(cnn_accuracies)
+    print('SCA ACC')
+    print(scatnet_accuracies)
+    print('*********************')
+
+    try:
+
+        results = {'CNN': cnn_accuracies,
+                   'ScatNet': scatnet_accuracies }
+        results_df = pd.DataFrame.from_dict(results)
+        results_df_name = f"./csv/accuracy_comparison.csv"
+        results_df.to_csv(results_df_name)
+    except Exception as e:
+        print(f'AHI AHI AHI' + str(e))
+
     # Plot the results
     plt.plot(subset_ratios[::-1], cnn_accuracies[::-1], label='CNN', color='blue')
     plt.plot(subset_ratios[::-1], scatnet_accuracies[::-1], label='ScatNet', color='orange')
