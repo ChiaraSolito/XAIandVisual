@@ -386,17 +386,18 @@ def plot_results(val_accuracies, train_losses, val_losses, f1_scores, model_name
     mean_acc = np.mean(acc_matrix, axis=0)
 
     num_epochs = range(1, len(acc_min)+1)
-    fig, ax = plt.subplots(figsize=(15, 15))
+    fig, ax = plt.subplots(figsize=(30, 15))
     for idx, fold_acc in enumerate(acc_matrix):
         ax.plot(num_epochs, fold_acc, '--', alpha=0.5, label=f"Fold n.{idx}")
     ax.fill_between(num_epochs, acc_min, acc_max, color="grey", alpha=0.2)
 
     ax.plot(num_epochs, mean_acc, '-', color="red", label='Mean Accuracy Between Folds')
-    plt.xticks(np.arange(1, len(num_epochs)+1, step=1))
+    plt.yticks(fontsize=20)
+    plt.xticks(np.arange(1, len(num_epochs)+1, step=1), fontsize=20)
     plt.xlim(1, len(num_epochs))
-    plt.ylim([min(acc_min) - 0.1, 1.0])
+    plt.ylim([min(acc_min) - 0.08, 1.0])
     plt.grid(False)
-    fig.legend(loc='outside upper center',ncol=3,fontsize=20)
+    fig.legend(loc='outside upper center',ncol=3, fontsize=20)
 
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
     acc_string = f"./models_trained/images/{model_name}_AccuracyFolds_{dt_string}.png"
@@ -414,12 +415,13 @@ def plot_results(val_accuracies, train_losses, val_losses, f1_scores, model_name
     val_min = np.min(val_matrix, axis=0)
     mean_loss_val = np.mean(val_matrix, axis=0)
 
-    fig, ax = plt.subplots(figsize=(15, 15))
+    fig, ax = plt.subplots(figsize=(30, 15))
     ax.plot(num_epochs, mean_loss_train, '-', color="red", label='Mean Training Curve')
     ax.fill_between(num_epochs, train_min, train_max, color="red", alpha=0.2)
     ax.plot(num_epochs, mean_loss_val, '-', color="blue", label='Mean Validation Curve')
     ax.fill_between(num_epochs, val_min, val_max, color="blue", alpha=0.2)
-    plt.xticks(np.arange(1, len(num_epochs)+1, step=1))
+    plt.yticks(fontsize=20)
+    plt.xticks(np.arange(1, len(num_epochs)+1, step=1),fontsize=20)
     plt.xlim(1, len(num_epochs))
     plt.ylim([min(val_min) - 0.1, max(val_max) + 0.1])
     plt.grid(False)
@@ -436,16 +438,17 @@ def plot_results(val_accuracies, train_losses, val_losses, f1_scores, model_name
     f1_min = np.min(f1_matrix, axis=0)
     mean_f1 = np.mean(f1_matrix, axis=0)
 
-    fig, ax = plt.subplots(figsize=(15, 15))
+    fig, ax = plt.subplots(figsize=(30, 15))
     for idx, fold_f1 in enumerate(f1_matrix):
         ax.plot(num_epochs, fold_f1, '--', alpha=0.5, label=f"Fold n.{idx}")
     ax.fill_between(num_epochs, f1_min, f1_max, color="grey", alpha=0.2)
-    ax.plot(num_epochs, mean_f1, '-', color="red", label='Mean F1 Score Folds') 
-    plt.xticks(np.arange(1, len(num_epochs)+1, step=1))
+    ax.plot(num_epochs, mean_f1, '-', color="red", label='Mean F1 Score Folds')
+    plt.yticks(fontsize=20)
+    plt.xticks(np.arange(1, len(num_epochs)+1, step=1),fontsize=20)
     plt.xlim(1, len(num_epochs))
-    plt.ylim([min(f1_min) - 0.1, max(f1_max) + 0.1])
+    plt.ylim([min(f1_min) - 0.1, 1.0])
     plt.grid(False)
-    fig.legend(loc='outside upper center',ncol=2,fontsize=20)
+    fig.legend(loc='outside upper center',ncol=3,fontsize=20)
 
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
     f1_string = f"./models_trained/images/{model_name}_F1Folds_{dt_string}.png"
