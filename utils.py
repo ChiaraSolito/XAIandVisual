@@ -73,7 +73,7 @@ class CustomDataset(Dataset):
         return sample
 
 
-def compute_metrics(y_true, y_pred, classes, model_name):
+def compute_metrics(y_true, y_pred, classes, model_name, ratio: None):
     """
     Compute the metrics: accuracy, confusion matrix, F1 score.\n
     Args:
@@ -81,6 +81,7 @@ def compute_metrics(y_true, y_pred, classes, model_name):
         y_pred: predicted probabilities for each class
         classes: list of the classes
         model_name: name of the model
+        ratio: percentage of data
     """
 
     # Accuracy
@@ -98,10 +99,14 @@ def compute_metrics(y_true, y_pred, classes, model_name):
     plt.xlabel('predicted')
     plt.ylabel('true')
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
-    plot_string = f"./models_trained/images/{model_name}_ConfusionMatrix_{dt_string}.png"
+    if ratio is not None:
+        plot_string = f"./models_trained/images/{model_name}_ConfusionMatrix_{ratio}_{dt_string}.png"
+    else:
+        plot_string = f"./models_trained/images/{model_name}_ConfusionMatrix_{dt_string}.png"
     plt.tick_params(axis=u'both', which=u'both',length=0)
-    plt.grid(b=None)
-    plt.savefig(plot_string)
+    plt.grid(False)
+    plt.savefig(fname=plot_string)
+    plt.close()
 
     return acc, f1score
 
@@ -137,6 +142,7 @@ def visTensor(tensor, model_name, ch=0, allkernels=False, nrow=4, padding=1):
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
     plot_string = f"./models_trained/images/{model_name}_visTensor_{dt_string}.png"
     plt.savefig(plot_string)
+    plt.close()
 
 
 def plot_filters_single_channel_big(t,model_name):
@@ -156,6 +162,7 @@ def plot_filters_single_channel_big(t,model_name):
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
     fig_string = f"./models_trained/images/{model_name}_SingleChannelBig_{dt_string}.png"
     fig.savefig(fig_string)
+    plt.close()
 
 
 def plot_filters_single_channel(t,model_name):
@@ -188,6 +195,7 @@ def plot_filters_single_channel(t,model_name):
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
     fig_string = f"./models_trained/images/{model_name}_SingleChannel_{dt_string}.png"
     fig.savefig(fig_string)
+    plt.close()
 
 
 def plot_filters_multi_channel(t,model_name):
@@ -222,6 +230,7 @@ def plot_filters_multi_channel(t,model_name):
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
     fig_string = f"./models_trained/images/{model_name}_MultiChannel_{dt_string}.png"
     fig.savefig(fig_string)
+    plt.close()
 
 
 
@@ -268,6 +277,7 @@ def plot_kernels(J, L, scattering, model_name):
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
     fig_string = f"./models_trained/images/{model_name}_Kernels_{dt_string}.png"
     fig.savefig(fig_string)
+    plt.close()
 
     f = scattering.phi["levels"][0]
     filter_c = fft2(f)
@@ -284,6 +294,7 @@ def plot_kernels(J, L, scattering, model_name):
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
     fig_string = f"./models_trained/images/{model_name}_Wavelets_{dt_string}.png"
     fig.savefig(fig_string)
+    plt.close()
 
 
 def get_mean(data: list[np.ndarray], ratio: float) -> str:
@@ -388,6 +399,7 @@ def plot_results(val_accuracies, train_losses, val_losses, f1_scores, model_name
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
     acc_string = f"./models_trained/images/{model_name}_AccuracyFolds_{dt_string}.png"
     fig.savefig(acc_string)
+    plt.close()
 
     # PLOT - LEARNING CURVE 
     train_matrix = np.array(train_losses)
@@ -412,6 +424,7 @@ def plot_results(val_accuracies, train_losses, val_losses, f1_scores, model_name
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
     lc_string = f"./models_trained/images/{model_name}_LearningCurve_{dt_string}.png"
     fig.savefig(lc_string)
+    plt.close()
 
     # PLOT - F1
     f1_matrix = np.array(f1_scores)
@@ -431,6 +444,7 @@ def plot_results(val_accuracies, train_losses, val_losses, f1_scores, model_name
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
     f1_string = f"./models_trained/images/{model_name}_F1Folds_{dt_string}.png"
     fig.savefig(f1_string)
+    plt.close()
 
 def filter_extraction(model, data_transform, model_name):
     print('Filter extraction')
@@ -481,6 +495,7 @@ def filter_extraction(model, data_transform, model_name):
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
     f1_string = f"./models_trained/images/{model_name}_FeatureMap_{dt_string}.png"
     fig.savefig(f1_string)
+    plt.close()
 
     visTensor(model_weights[0], model_name, ch=0, allkernels=False)
 

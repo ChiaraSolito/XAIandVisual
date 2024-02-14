@@ -200,7 +200,6 @@ def training_main(data_transform, train_data, train_labels, base_model: str):
         trainloader = DataLoader(train_data_fold, batch_size=64, shuffle=True)
         validationloader = DataLoader(val_data_fold, batch_size=64)
 
-
         start_time = timer()
 
         model_results = train(model=model,
@@ -239,7 +238,7 @@ def training_main(data_transform, train_data, train_labels, base_model: str):
     # plot_results(val_accuracies, train_losses, val_losses, f1_scores, base_model)
 
     if kernels:
-        plot_kernels(J,L,scattering,base_model)
+        plot_kernels(J, L, scattering, base_model)
 
     index = np.argmax(max_val_accuracies)
 
@@ -254,13 +253,12 @@ def training_main(data_transform, train_data, train_labels, base_model: str):
     return best_model
 
 
-
-def test(data_transform, test_data, test_labels, model, model_name, device):
+def test(data_transform, test_data, test_labels, model, model_name, device, ratio: float = None):
     test_data = CustomDataset(test_data, test_labels, transform=data_transform)
     testloader = DataLoader(test_data, batch_size=64)
 
     model.eval()
-    pred_labels = torch.empty(size=(1,),dtype=torch.int8)
+    pred_labels = torch.empty(size=(1,), dtype=torch.int8)
     with torch.no_grad():
         for batch, sample_batched in enumerate(testloader):
             X = sample_batched[0].to(device)
@@ -269,9 +267,10 @@ def test(data_transform, test_data, test_labels, model, model_name, device):
             y_pred = model(X)
 
             pred_label = y_pred.argmax(dim=1)
-            pred_labels = torch.cat((pred_labels, pred_label),0)
+            pred_labels = torch.cat((pred_labels, pred_label), 0)
     pred = torch.cat([pred_labels[1:]])
-    acc, f1_score = compute_metrics(test_labels, pred, classes=['meningioma', 'notumor'], model_name=model_name)
+    acc, f1_score = compute_metrics(test_labels, pred, classes=['meningioma', 'notumor'], model_name=model_name,
+                                    ratio=ratio)
 
     # dd/mm/YY H:M:S
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
