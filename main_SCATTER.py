@@ -42,6 +42,3 @@ if __name__ == "__main__":
     # TESTING
     acc = test(data_transform, test_data, test_labels, model, MODEL_NAME, device='cpu')
     print("Accuracy", acc)
-
-    # EXTRACTION OF FILTERS
-    filter_extraction(model, data_transform, MODEL_NAME)
