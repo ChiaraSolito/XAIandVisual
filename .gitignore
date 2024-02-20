@@ -10,3 +10,4 @@ models_trained/CNN/*.pth
 models_trained/ScatNet/*.pth
 models_trained/*.png
 csv/norm/*
+RESULTS_RIGHE

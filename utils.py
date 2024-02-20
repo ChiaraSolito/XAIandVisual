@@ -275,24 +275,26 @@ def plot_kernels(J, L, scattering, model_name):
         i = i + 1
 
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
-    fig_string = f"./models_trained/images/{model_name}_Kernels_{dt_string}.png"
+    fig_string = f"./models_trained/images/{model_name}_Kernels_Wavelets_{dt_string}.png"
     fig.savefig(fig_string)
+    plt.title('Wavelets Plot')
     plt.close()
 
-    f = scattering.phi["levels"][0]
-    filter_c = fft2(f)
-    filter_c = np.fft.fftshift(filter_c)
-    filter_c = np.abs(filter_c)
+    f_new = scattering.phi["levels"][0]
+    filter_new = fft2(f_new)
+    filter_new = np.fft.fftshift(filter_new)
+    filter_new = np.abs(filter_new)
 
     plt.figure(figsize=(5, 5))
-    plt.imshow(filter_c, cmap='Greys')
+    plt.imshow(filter_new, cmap='Greys')
     plt.grid(False)
     plt.title('Low-pass filter (scaling function)')
-    plt.imshow(np.log(filter_c), cmap='Greys')
-    plt.grid(False)
-    plt.title('Low-pass filter (scaling function)')
+    
+    # plt.imshow(np.log(filter_c), cmap='Greys')
+    # plt.grid(False)
+    # plt.title('Low-pass filter (scaling function)')
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
-    fig_string = f"./models_trained/images/{model_name}_Wavelets_{dt_string}.png"
+    fig_string = f"./models_trained/images/{model_name}_LowPassFilters_{dt_string}.png"
     fig.savefig(fig_string)
     plt.close()
 
