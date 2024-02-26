@@ -92,7 +92,7 @@ def compute_metrics(y_true, y_pred, classes, model_name, ratio: None):
 
     # Confusion matrix
     conf_mat = confusion_matrix(y_true, y_pred.numpy(), labels=list(range(0, len(classes))))
-    plt.figure(figsize=(7, 5))
+    fig_metrics = plt.figure(figsize=(7, 5))
     disp = ConfusionMatrixDisplay(confusion_matrix=conf_mat, display_labels=classes)
     disp.plot()
     plt.title('confusion matrix: test set')
@@ -106,7 +106,7 @@ def compute_metrics(y_true, y_pred, classes, model_name, ratio: None):
     plt.tick_params(axis=u'both', which=u'both',length=0)
     plt.grid(False)
     plt.savefig(fname=plot_string)
-    plt.close()
+    plt.close(fig_metrics)
 
     return acc, f1score
 
@@ -453,7 +453,7 @@ def plot_results(val_accuracies, train_losses, val_losses, f1_scores, model_name
     fig.savefig(f1_string)
     plt.close()
 
-def filter_extraction(model, model_name, image):
+def filter_extraction(model, model_name, image, single_channel):
 
     model_weights =[]
     conv_layers = []
@@ -490,8 +490,8 @@ def filter_extraction(model, model_name, image):
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
     f1_string = f"./models_trained/images/{model_name}_FeatureMap_{dt_string}.png"
     fig.savefig(f1_string)
-    plt.close()
+    plt.close(fig)
 
     visTensor(model_weights[0], model_name, ch=0, allkernels=False)
 
-    plot_weights(model_children[0], single_channel = True, collated = False, model_name = model_name)
+    plot_weights(model_children[0], single_channel = single_channel, collated = False, model_name = model_name)
