@@ -42,10 +42,5 @@ class ScatNet2D(torch.nn.Module):
         x = x.view(x.size(0), -1)
         x = self.lin(x)
         x = self.classifier(x)  
-        
-        # x = F.relu(self.fc1(x))
-        # x = F.relu(self.fc2(x))
-        # x = self.drop(x)
-        # x = self.fc3(x)
 
         return x
