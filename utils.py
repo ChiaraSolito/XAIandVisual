@@ -261,9 +261,7 @@ def plot_weights(model_layer, single_channel=True, collated=False, model_name='C
 
 # visualizzare tutti i filtri che sono presenti negli N banchi di filtri che avete creato
 def plot_kernels(J, L, scattering, model_name):
-    fig, axs = plt.subplots(J, L, sharex=True, sharey=True, )
-    fig.set_figheight(5)
-    fig.set_figwidth(12)
+    fig_wavelets, axs = plt.subplots(J, L, sharex=True, sharey=True, figsize=(12, 5))
     i = 0
     for filter in scattering.psi:
         f = filter["levels"][0]
@@ -276,27 +274,25 @@ def plot_kernels(J, L, scattering, model_name):
 
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
     fig_string = f"./models_trained/images/{model_name}_Kernels_Wavelets_{dt_string}.png"
-    fig.savefig(fig_string)
-    plt.title('Wavelets Plot')
-    plt.close()
+    fig_wavelets.savefig(fig_string)
+    plt.close(fig_wavelets)
 
-    f_new = scattering.phi["levels"][0]
-    filter_new = fft2(f_new)
-    filter_new = np.fft.fftshift(filter_new)
-    filter_new = np.abs(filter_new)
-
-    plt.figure(figsize=(5, 5))
-    plt.imshow(filter_new, cmap='Greys')
-    plt.grid(False)
-    plt.title('Low-pass filter (scaling function)')
+    fig_filter, axs = plt.subplots(1, J, figsize=(12, 5))
+    fig_filter.suptitle(f'Low-pass filters (scaling functions) with J={J}', fontsize=16)
+    for j in range(J):
+        f = scattering.phi["levels"][j]
+        filter_c = fft2(f)
+        filter_c = np.fft.fftshift(filter_c)
+        filter_c = np.abs(filter_c)
+        axs[j].imshow(filter_c, cmap='Greys')
+        axs[j].axis('on')
+        axs[j].grid(False)
+        axs[j].set_title("$J = {}$".format(j), fontsize=12)
     
-    # plt.imshow(np.log(filter_c), cmap='Greys')
-    # plt.grid(False)
-    # plt.title('Low-pass filter (scaling function)')
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
     fig_string = f"./models_trained/images/{model_name}_LowPassFilters_{dt_string}.png"
-    fig.savefig(fig_string)
-    plt.close()
+    fig_filter.savefig(fig_string)
+    plt.close(fig_filter)
 
 
 def get_mean(data: list[np.ndarray], ratio: float) -> str:
@@ -457,10 +453,7 @@ def plot_results(val_accuracies, train_losses, val_losses, f1_scores, model_name
     fig.savefig(f1_string)
     plt.close()
 
-def filter_extraction(model, data_transform, model_name):
-    print('Filter extraction')
-    image = cv2.imread('data/test/notumor/5101311705_3e5526d521_o.jpg')
-    print('Chosen image: 5101311705_3e5526d521_o.jpg')
+def filter_extraction(model, model_name, image):
 
     model_weights =[]
     conv_layers = []
@@ -473,15 +466,6 @@ def filter_extraction(model, data_transform, model_name):
             model_weights.append(model_children[i].weight)
             conv_layers.append(model_children[i])
     print(f"Total convolution layers: {counter}")
-
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model_CNN = model.to(device)
-
-    image = data_transform(image)
-    print(f"Image shape before: {image.shape}")
-    image = image.unsqueeze(0)
-    print(f"Image shape after: {image.shape}")
-    image = image.to(device)
     
     outputs = []
     names = []
