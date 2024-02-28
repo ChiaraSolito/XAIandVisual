@@ -31,10 +31,10 @@ def data_loading(path_train: str,
                                           list[np.ndarray],  # test_images
                                           np.ndarray]:  # test_labels
 
-    n_meningiomas_train = len(os.listdir(path_train + "meningioma"))  # 2174
-    n_meningiomas_test = len(os.listdir(path_test + "meningioma"))  # 544
-    n_notumor_train = len(os.listdir(path_train + "notumor"))  # 2559
-    n_notumor_test = len(os.listdir(path_test + "notumor"))  # 640
+    n_meningiomas_train = len(os.listdir(path_train + "meningioma"))  
+    n_meningiomas_test = len(os.listdir(path_test + "meningioma"))  
+    n_notumor_train = len(os.listdir(path_train + "notumor"))
+    n_notumor_test = len(os.listdir(path_test + "notumor")) 
 
     # Define train and test labels - 0 meningiomas, 1 notumor
     train_labels = np.zeros(n_meningiomas_train + n_notumor_train)
