@@ -127,22 +127,39 @@ def colorize(z):
 
 # Function to visualize the kernels for the two convolutional layers
 def visTensor(tensor, model_name, ch=0, allkernels=False, nrow=4, padding=1):
-    n, c, w, h = tensor.shape
+    n, c, _, _ = tensor.shape
 
-    #grey vs color
-    if allkernels:
-        tensor = tensor.view(n * c, -1, w, h)
-    elif c != 3:
+    if c != 3:
         tensor = tensor[:, ch, :, :].unsqueeze(dim=1)
 
-    rows = np.min((tensor.shape[0] // nrow + 1, 64))
-    grid = utils.make_grid(tensor, nrow=nrow, normalize=True, padding=padding)
-    plt.figure(figsize=(nrow, rows))
-    plt.imshow(grid.cpu().numpy().transpose((1, 2, 0)))
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
     plot_string = f"./models_trained/images/{model_name}_visTensor_{dt_string}.png"
+
+    if allkernels:
+        num_subplots = 3
+    else:
+        num_subplots = 1
+
+    rows = min((tensor.shape[0] // nrow + 1, 64))
+    if num_subplots == 1:
+        grid = utils.make_grid(tensor, nrow=nrow, normalize=True, padding=padding)
+        fig, ax = plt.subplots(figsize=(nrow, rows))
+        ax.imshow(grid.cpu().numpy().transpose((1, 2, 0)), cmap='viridis')
+    else:
+        fig, axes = plt.subplots(1, num_subplots, figsize=(10, 5))
+        for i in range(num_subplots):
+            channel_tensor = tensor[:, i, :, :].unsqueeze(dim=1)
+            grid = utils.make_grid(channel_tensor, nrow=nrow, normalize=True, padding=padding)
+
+            ax = axes[i]
+            ax.imshow(grid.cpu().numpy().transpose((1, 2, 0)), cmap='viridis')
+            ax.axis('off')
+            ax.set_title(f"Channel {i}", fontsize=14)
+            ax.grid(False)
+
+    plt.subplots_adjust(wspace=0.5, hspace=0.5)
     plt.savefig(plot_string)
-    plt.close()
+    plt.close(fig)
 
 
 def plot_filters_single_channel_big(t,model_name):
@@ -492,6 +509,6 @@ def filter_extraction(model, model_name, image, single_channel):
     fig.savefig(f1_string)
     plt.close(fig)
 
-    visTensor(model_weights[0], model_name, ch=0, allkernels=False)
+    visTensor(model_weights[0], model_name, ch=0, allkernels=True)
 
     plot_weights(model_children[0], single_channel = single_channel, collated = False, model_name = model_name)
