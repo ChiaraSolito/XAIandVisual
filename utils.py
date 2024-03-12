@@ -520,7 +520,7 @@ def filter_extraction(model, model_name, image, single_channel):
         feature_map = feature_map.squeeze(0)
         gray_scale = torch.sum(feature_map,0)
         gray_scale = gray_scale / feature_map.shape[0]
-        processed.append(gray_scale.data.cpu().numpy())
+        processed.append(gray_scale.data.detach().cpu().numpy())
 
     fig = plt.figure(figsize=(20, 40))
     for i in range(len(processed)):
