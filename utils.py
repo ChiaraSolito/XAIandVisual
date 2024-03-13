@@ -536,3 +536,84 @@ def filter_extraction(model, model_name, image, single_channel):
     visTensor(model_weights[0], model_name, ch=0, allkernels=True)
 
     plot_weights(model_children[0], single_channel = single_channel, collated = False, model_name = model_name)
+
+
+def plot_statistics(plot1, plot2, plot3, name_image, suptitle, model_name):
+    fig,axes = plt.subplots(ncols=3,nrows=1,figsize=(15, 5))
+    plt.suptitle(f'{name_image} - {model_name} - {suptitle}', fontsize=16, y=1.1)
+
+    axes[0].plot(plot1, plot2,".")
+    axes[0].set_xlabel(f"IG scratch {name_image}")
+    axes[0].set_ylabel(f"LIME {name_image}")
+    axes[0].set_title("IG vs LIME")
+
+    axes[1].plot(plot3, plot2,".")
+    axes[1].set_xlabel(f"IG captum {name_image}")
+    axes[1].set_ylabel(f"LIME {name_image}")
+    axes[1].set_title("IG vs LIME")
+
+    axes[2].plot(plot1, plot3,".")
+    axes[2].set_xlabel(f"IG scratch {name_image}")
+    axes[2].set_ylabel(f"IG captum {name_image}")
+    axes[2].set_title("Scratch vs Captum IG")
+
+def hist_statistics(plot1, plot2, plot3, name_image, suptitle, model_name):
+    fig,axes = plt.subplots(ncols=3,nrows=1,figsize=(12, 5),constrained_layout=True)
+    plt.suptitle(f'{name_image} - {model_name} - {suptitle}', fontsize=20)
+
+    hist_2d, x_edges, y_edges = np.histogram2d(plot1,plot2,bins=20)
+    axes[0].imshow(hist_2d.T,origin="lower")
+    axes[0].set_xlabel(f"IG scratch {name_image}")
+    axes[0].set_ylabel(f"LIME {name_image}")
+    axes[0].set_title("IG vs LIME")
+
+    hist_2d, x_edges, y_edges = np.histogram2d(plot3,plot2,bins=20)
+    axes[1].imshow(hist_2d.T,origin="lower")
+    axes[1].set_xlabel(f"IG captum {name_image}")
+    axes[1].set_ylabel(f"LIME {name_image}")
+    axes[1].set_title("IG vs LIME")
+
+    hist_2d, x_edges, y_edges = np.histogram2d(plot1,plot3,bins=20)
+    axes[2].imshow(hist_2d.T,origin="lower")
+    axes[2].set_xlabel(f"IG scratch {name_image}")
+    axes[2].set_ylabel(f"IG captum {name_image}")
+    axes[2].set_title("Scratch vs Captum")
+
+def loghist_statistics(plot1, plot2, plot3, name_image, suptitle, model_name):
+    fig,axes = plt.subplots(ncols=3,nrows=1,figsize=(12, 5),constrained_layout=True)
+    plt.suptitle(f'{name_image} - {model_name} - {suptitle}', fontsize=20)
+
+    hist_2d, x_edges, y_edges = np.histogram2d(plot1,plot2,bins=20)
+    hist_2d_log = np.zeros(hist_2d.shape) 
+    non_zeros = hist_2d != 0 
+    hist_2d_log[non_zeros] = np.log(hist_2d[non_zeros]) 
+    axes[0].imshow(hist_2d_log.T,origin="lower")
+    axes[0].set_xlabel(f"IG scratch {name_image}")
+    axes[0].set_ylabel(f"LIME {name_image}")
+    axes[0].set_title("IG vs LIME")
+
+    hist_2d, x_edges, y_edges = np.histogram2d(plot3,plot2,bins=20)
+    hist_2d_log = np.zeros(hist_2d.shape)
+    non_zeros = hist_2d != 0 
+    hist_2d_log[non_zeros] = np.log(hist_2d[non_zeros])
+    axes[1].imshow(hist_2d_log.T,origin="lower")
+    axes[1].set_xlabel(f"IG captum {name_image}")
+    axes[1].set_ylabel(f"LIME {name_image}")
+    axes[1].set_title("IG vs LIME")
+
+    hist_2d, x_edges, y_edges = np.histogram2d(plot1,plot3,bins=20)
+    hist_2d_log = np.zeros(hist_2d.shape)
+    non_zeros = hist_2d != 0
+    hist_2d_log[non_zeros] = np.log(hist_2d[non_zeros])
+    axes[2].imshow(hist_2d_log.T,origin="lower")
+    axes[2].set_xlabel(f"IG scratch {name_image}")
+    axes[2].set_ylabel(f"IG captum {name_image}")
+    axes[2].set_title("Scratch vs Captum")
+
+def mutual_information(hgram):
+    pxy = hgram / float(np.sum(hgram))
+    px = np.sum(pxy, axis=1) # marginal for x over y
+    py = np.sum(pxy, axis=0) # marginal for y over x
+    px_py = px[:, None] * py[None, :] 
+    nzs = pxy > 0 # Only non-zero pxy values contribute to the sum
+    return np.sum(pxy[nzs] * np.log(pxy[nzs] / px_py[nzs]))
