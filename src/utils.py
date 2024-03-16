@@ -12,8 +12,9 @@ from datetime import datetime
 from colorsys import hls_to_rgb
 from scipy.fft import fft2
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
-from torchvision.transforms import ToTensor, Compose, Resize, ToPILImage, Normalize
+from torchvision.transforms import ToTensor, Compose, Resize, ToPILImage, Normalize, RandomResizedCrop, RandomHorizontalFlip,RandomRotation
 from sklearn.metrics import ConfusionMatrixDisplay
+import PIL
 
 # Style for chart
 sns.set_style('darkgrid')
@@ -24,6 +25,13 @@ plt.rc('ytick', labelsize=13)
 plt.rc('legend', fontsize=13)
 plt.rc('font', size=13)
 
+def data_augmentation():
+    transforms = Compose([
+        RandomResizedCrop(size=(128, 128), antialias=True),
+        RandomHorizontalFlip(p=0.5),
+        RandomRotation(20, resample=PIL.Image.BILINEAR)
+    ])
+    img = transforms(img)
 
 def data_loading(path_train: str,
                  path_test: str) -> tuple[list[np.ndarray],  # train_images

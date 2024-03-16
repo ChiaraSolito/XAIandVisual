@@ -1,8 +1,8 @@
 # Libraries
 import torch
-from training_main import training_main, test
+from src.training_main import training_main, test
 import matplotlib as plt
-from utils import data_loading, normalization, filter_extraction, plot_results
+from src.utils import data_loading, normalization, filter_extraction, plot_results
 import cv2
 
 import numpy as np

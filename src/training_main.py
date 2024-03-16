@@ -4,13 +4,13 @@ import pandas as pd
 import torch
 from torch.nn import CrossEntropyLoss
 from torch.utils.data import DataLoader
-from utils import CustomDataset, compute_metrics, plot_results, plot_kernels
+from src.utils import CustomDataset, compute_metrics, plot_results, plot_kernels
 from sklearn.model_selection import StratifiedKFold
 from tqdm.auto import tqdm
 from timeit import default_timer as timer
 from kymatio.torch import Scattering2D
-from ScatNet import ScatNet2D
-from CNN import CNN
+from src.ScatNet import ScatNet2D
+from src.CNN import CNN
 from datetime import datetime
 from sklearn.metrics import f1_score
 

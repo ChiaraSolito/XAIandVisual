@@ -6,8 +6,8 @@ from itertools import chain
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from training_main import training_main, test
-from utils import data_loading, normalization
+from src.training_main import training_main, test
+from src.utils import data_loading, normalization
 import random
 
 
