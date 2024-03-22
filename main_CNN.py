@@ -2,7 +2,7 @@
 import torch
 from training_main import training_main, test
 import matplotlib as plt
-from utils import newdata_loading, newnormalization, newnormalization2, filter_extraction, plot_results
+from utils import data_loading, normalization, normalization2, plot_results
 import cv2
 
 import numpy as np
@@ -13,18 +13,18 @@ if __name__ == "__main__":\
 
     model_name = 'CNN'
     num_fold = 10
-    num_epochs = 15
+    num_epochs = 10
 
     # LOAD DATA
-    train_data, train_labels, test_data, test_labels = newdata_loading("./data/train/", "./data/test/")
+    train_data, train_labels, test_data, test_labels = data_loading("./data/train/", "./data/test/")
     data = train_data + test_data
 
     # NORMALIZATION
-    data_transform = newnormalization(data)
-    data_transform2 = newnormalization2(data)
+    data_transform = normalization(data)
+    data_transform2 = normalization2(data)
 
     # TRAINING
-    model = training_main(data_transform, data_transform2, train_data, train_labels, model_name, num_epochs, num_fold)
+    model = training_main(data_transform, data_transform, train_data, train_labels, model_name, num_epochs, num_fold)
 
     # PLOTTING
     val_accuracies = np.zeros([num_fold, num_epochs])

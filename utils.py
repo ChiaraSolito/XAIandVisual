@@ -417,6 +417,36 @@ def normalization(data: list[np.ndarray], ratio: float = 1.0):
         ToPILImage(),
         Resize(size=(128, 128)),
         ToTensor(),
+        Normalize(mean=[R_MEAN, G_MEAN, B_MEAN], std=[R_STD, G_STD, B_STD]),
+        RandomRotation(degrees=(0, 90)), 
+        RandomHorizontalFlip(p=0.1),
+        RandomVerticalFlip(p=0.1)
+    ])
+
+    return data_transform
+
+def normalization2(data: list[np.ndarray], ratio: float = 1.0):
+    RGB_mean_path = get_mean(data, ratio)
+    RGB_mean_df = pd.read_csv(RGB_mean_path)
+    print("Red ch mean = ", RGB_mean_df.iloc[0].R_MEAN.item(), "\nGreen ch mean = ", RGB_mean_df.iloc[0].G_MEAN.item(),
+          "\nBlue ch mean = ", RGB_mean_df.iloc[0].B_MEAN.item())
+
+    RGB_std_path = get_std(data, ratio)
+    RGB_std_df = pd.read_csv(RGB_std_path)
+    print("Red ch std = ", RGB_std_df.iloc[0].R_STD.item(), "\nGreen ch std = ", RGB_std_df.iloc[0].G_STD.item(),
+          "\nBlue ch std = ", RGB_std_df.iloc[0].B_STD.item())
+
+    R_MEAN = RGB_mean_df.iloc[0].R_MEAN.item()
+    G_MEAN = RGB_mean_df.iloc[0].G_MEAN.item()
+    B_MEAN = RGB_mean_df.iloc[0].B_MEAN.item()
+    R_STD = RGB_std_df.iloc[0].R_STD.item()
+    G_STD = RGB_std_df.iloc[0].G_STD.item()
+    B_STD = RGB_std_df.iloc[0].B_STD.item()
+
+    data_transform = Compose([
+        ToPILImage(),
+        Resize(size=(128, 128)),
+        ToTensor(),
         Normalize(mean=[R_MEAN, G_MEAN, B_MEAN], std=[R_STD, G_STD, B_STD])
     ])
 
@@ -479,13 +509,13 @@ def newnormalization2(data: list[np.ndarray], ratio: float = 1.0):
 def plot_results(train_accuracies, val_accuracies, train_losses, val_losses, f1_scores, model_name, best_fold, show=False):
 
     # PLOT - VALIDATION ACCURACY
-    train_acc_matrix = np.array(train_accuracies, axis=0)
+    train_acc_matrix = np.array(train_accuracies)
     train_acc_std = np.std(train_acc_matrix, axis=0)
     train_acc_min = np.min(train_acc_matrix, axis=0)
     train_mean_acc = np.mean(train_acc_matrix, axis=0)
     train_best_acc = train_acc_matrix[best_fold, :]
 
-    val_acc_matrix = np.array(val_accuracies, axis=0)
+    val_acc_matrix = np.array(val_accuracies)
     val_acc_std = np.std(val_acc_matrix, axis=0)
     val_mean_acc = np.mean(val_acc_matrix, axis=0)
     val_best_acc = val_acc_matrix[best_fold, :]

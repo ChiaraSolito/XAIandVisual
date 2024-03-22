@@ -177,7 +177,7 @@ def training_main(data_transform, data_transform2, train_data, train_labels, bas
 
         # Instance of the model
         if base_model == 'CNN':
-            app_model = CNN(input_channel=1, num_classes=n_classes).to(device)
+            app_model = CNN(input_channel=3, num_classes=n_classes).to(device)
             lr = 0.001
             kernels = False
         elif base_model == 'ScatNet':
