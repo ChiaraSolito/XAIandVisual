@@ -14,13 +14,10 @@ from src.CNN import CNN
 from datetime import datetime
 from sklearn.metrics import f1_score
 
-NUM_FOLD = 10
-SIZE = (128, 128)
 
-
-def stratified_kfold(train_data: list[np.ndarray], train_labels: list[str], model_name: str) -> tuple[
+def stratified_kfold(train_data: list[np.ndarray], train_labels: list[str], model_name: str, num_fold) -> tuple[
     pd.DataFrame, pd.DataFrame, list, list]:
-    skf = StratifiedKFold(n_splits=NUM_FOLD, shuffle=True, random_state=42)
+    skf = StratifiedKFold(n_splits=num_fold, shuffle=True, random_state=42)
     skf.get_n_splits(train_data, train_labels)
 
     train_idx = []
@@ -36,7 +33,7 @@ def stratified_kfold(train_data: list[np.ndarray], train_labels: list[str], mode
     val_splits = pd.DataFrame(
         columns=["val_0", "val_1", "val_2", "val_3", "val_4", "val_5", "val_6", "val_7", "val_8", "val_9"])
 
-    for i in range(0, NUM_FOLD):
+    for i in range(0, num_fold):
         train_splits["train_" + str(i)] = train_idx[i]
         val_splits["val_" + str(i)] = val_idx[i]
 
@@ -52,7 +49,7 @@ def train_step(model: torch.nn.Module,
                optimizer: torch.optim.Optimizer,
                device: torch.device):
     model.train()
-    train_loss, train_acc = 0, 0
+    train_loss, train_acc,train_f1 = 0, 0, 0
 
     for batch, sample_batched in enumerate(dataloader):
         X = sample_batched[0].to(device)
@@ -68,10 +65,12 @@ def train_step(model: torch.nn.Module,
 
         y_pred_class = torch.argmax(torch.softmax(y_pred, dim=1), dim=1)
         train_acc += (y_pred_class == y).sum().item() / len(y_pred)
+        train_f1 += f1_score(y.cpu().numpy(), y_pred_class.cpu().numpy())
 
     train_loss = train_loss / len(dataloader)
     train_acc = train_acc / len(dataloader)
-    return train_loss, train_acc
+    train_f1 = train_f1 / len(dataloader)
+    return train_loss, train_acc, train_f1
 
 
 def val_step(model: torch.nn.Module,
@@ -111,6 +110,7 @@ def train(model: torch.nn.Module,
           model_name: str = 'CNN'):
     results = {"train_loss": [],
                "train_acc": [],
+               "train_f1": [],
                "val_loss": [],
                "val_acc": [],
                "val_f1": []
@@ -118,7 +118,7 @@ def train(model: torch.nn.Module,
 
     best_val = 0
     for epoch in tqdm(range(epochs)):
-        train_loss, train_acc = train_step(model=model,
+        train_loss, train_acc, train_f1 = train_step(model=model,
                                            dataloader=train_dataloader,
                                            loss_fn=loss_fn,
                                            optimizer=optimizer,
@@ -147,6 +147,7 @@ def train(model: torch.nn.Module,
 
         results["train_loss"].append(train_loss)
         results["train_acc"].append(train_acc)
+        results["train_f1"].append(train_f1)
         results["val_loss"].append(val_loss)
         results["val_acc"].append(val_acc)
         results["val_f1"].append(val_f1)
@@ -156,21 +157,23 @@ def train(model: torch.nn.Module,
     return results
 
 
-def training_main(data_transform, train_data, train_labels, base_model: str):
+def training_main(data_transform_train, data_transform_val, train_data, train_labels, base_model: str, num_epochs, num_fold):
     global app_model, lr
 
+    new_train_data = train_data * 3
+    new_train_labels = np.concatenate((train_labels, train_labels, train_labels))
+
     # Stratified K-FOLD
-    train_splits, val_splits, train_idx, val_idx = stratified_kfold(train_data, train_labels, base_model)
+    train_splits, val_splits, train_idx, val_idx = stratified_kfold(new_train_data, new_train_labels, base_model, num_fold)
 
     # TRAINING
-    num_epochs = 20
     n_classes = 2
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print('Device: ', device)
     criterion = torch.nn.CrossEntropyLoss()  # to choose
 
-    for i in range(0, NUM_FOLD):
+    for i in range(0, num_fold):
 
         # Instance of the model
         if base_model == 'CNN':
@@ -192,10 +195,10 @@ def training_main(data_transform, train_data, train_labels, base_model: str):
 
         model = app_model
         optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-        train_data_fold = CustomDataset([train_data[x] for x in train_idx[i]], [train_labels[x] for x in train_idx[i]],
-                                        transform=data_transform)
-        val_data_fold = CustomDataset([train_data[x] for x in val_idx[i]], [train_labels[x] for x in val_idx[i]],
-                                      transform=data_transform)
+        train_data_fold = CustomDataset([new_train_data[x] for x in train_idx[i]], [new_train_labels[x] for x in train_idx[i]],
+                                        transform=data_transform_train)
+        val_data_fold = CustomDataset([new_train_data[x] for x in val_idx[i]], [new_train_labels[x] for x in val_idx[i]],
+                                      transform=data_transform_val)
 
         trainloader = DataLoader(train_data_fold, batch_size=64, shuffle=True)
         validationloader = DataLoader(val_data_fold, batch_size=64, shuffle=True)
@@ -221,21 +224,11 @@ def training_main(data_transform, train_data, train_labels, base_model: str):
         results_df_name = f"./csv/{base_model}/results_df_" + str(i) + ".csv"
         results_df.to_csv(results_df_name)
 
-    max_val_accuracies = np.zeros([NUM_FOLD, 1])
-    # val_accuracies = np.zeros([NUM_FOLD, num_epochs])
-    # train_losses = np.zeros([NUM_FOLD, num_epochs])
-    # val_losses = np.zeros([NUM_FOLD, num_epochs])
-    # f1_scores = np.zeros([NUM_FOLD,num_epochs])
+    max_val_accuracies = np.zeros([num_fold, 1])
 
-    for i in range(NUM_FOLD):
+    for i in range(num_fold):
         results_string = f"./csv/{base_model}/results_df_" + str(i) + ".csv"
         max_val_accuracies[i] = np.max(pd.read_csv(results_string)["val_acc"])
-        # val_accuracies[i] = (pd.read_csv(results_string)["val_acc"]).to_list()
-        # val_losses[i] = (pd.read_csv(results_string)["val_loss"]).to_list()
-        # train_losses[i] = (pd.read_csv(results_string)["train_loss"]).to_list()
-        # f1_scores[i] = (pd.read_csv(results_string)["val_f1"]).to_list()
-
-    # plot_results(val_accuracies, train_losses, val_losses, f1_scores, base_model)
 
     if kernels:
         plot_kernels(J, L, scattering, base_model)
@@ -268,7 +261,7 @@ def test(data_transform, test_data, test_labels, model, model_name, device, rati
             pred_label = y_pred.argmax(dim=1)
             pred_labels = torch.cat((pred_labels, pred_label), 0)
     pred = torch.cat([pred_labels[1:]])
-    acc, f1_score = compute_metrics(test_labels, pred, classes=['meningioma', 'notumor'], model_name=model_name,
+    acc, f1_score = compute_metrics(test_labels, pred, classes=['notumor', 'meningioma'], model_name=model_name,
                                     ratio=ratio)
 
     # dd/mm/YY H:M:S
@@ -282,4 +275,4 @@ def test(data_transform, test_data, test_labels, model, model_name, device, rati
     results_df_name = f"./csv/{model_name}/test_results_df_" + dt_string + ".csv"
     results_df.to_csv(results_df_name)
 
-    return acc
+    return acc, f1_score
