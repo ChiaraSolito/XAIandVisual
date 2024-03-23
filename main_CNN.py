@@ -39,8 +39,8 @@ if __name__ == "__main__":\
         train_losses[i] = (pd.read_csv(results_string)["train_loss"]).to_list()
         f1_scores[i] = (pd.read_csv(results_string)["val_f1"]).to_list()
 
-    plot_results(val_accuracies, train_losses, val_losses, f1_scores, model_name)
+    # plot_results(val_accuracies, train_losses, val_losses, f1_scores, model_name)
 
-    # TESTING
-    acc = test(data_transform, test_data, test_labels, model, model_name, device='cpu')
-    print("Accuracy", acc)
+    # # TESTING
+    # acc = test(data_transform, test_data, test_labels, model, model_name, device='cpu')
+    # print("Accuracy", acc)
