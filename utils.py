@@ -25,8 +25,7 @@ plt.rc('ytick', labelsize=13)
 plt.rc('legend', fontsize=13)
 plt.rc('font', size=13)
 
-###### TEST: CHANGING ALL TRAINING SETTING
-def newdata_loading(path_train: str,
+def data_loading(path_train: str,
                  path_test: str) -> tuple[list[np.ndarray],  # train_images
                                           np.ndarray,  # train_labels
                                           list[np.ndarray],  # test_images
@@ -46,42 +45,12 @@ def newdata_loading(path_train: str,
     test_labels = test_labels.astype('uint8')
 
     # Load train set
-    train_data = [cv2.cvtColor(cv2.imread(file), cv2.COLOR_BGR2GRAY) for file in glob.glob(path_train + '/notumor/*.jpg')]
-    train_data.extend(cv2.cvtColor(cv2.imread(file), cv2.COLOR_BGR2GRAY) for file in glob.glob(path_train + '/meningioma/*.jpg'))
+    train_data = [cv2.imread(file) for file in glob.glob(path_train + '/notumor/*.jpg')]
+    train_data.extend(cv2.imread(file) for file in glob.glob(path_train + '/meningioma/*.jpg'))
 
     # Load test set
-    test_data = [cv2.cvtColor(cv2.imread(file), cv2.COLOR_BGR2GRAY) for file in glob.glob(path_test + '/notumor/*.jpg')]
-    test_data.extend(cv2.cvtColor(cv2.imread(file), cv2.COLOR_BGR2GRAY) for file in glob.glob(path_test + '/meningioma/*.jpg'))
-
-    return train_data, train_labels, test_data, test_labels
-
-
-def data_loading(path_train: str,
-                 path_test: str) -> tuple[list[np.ndarray],  # train_images
-                                          np.ndarray,  # train_labels
-                                          list[np.ndarray],  # test_images
-                                          np.ndarray]:  # test_labels
-
-    n_meningiomas_train = len(os.listdir(path_train + "meningioma"))  
-    n_meningiomas_test = len(os.listdir(path_test + "meningioma"))  
-    n_notumor_train = len(os.listdir(path_train + "notumor"))
-    n_notumor_test = len(os.listdir(path_test + "notumor")) 
-
-    # Define train and test labels - 0 meningiomas, 1 notumor
-    train_labels = np.zeros(n_meningiomas_train + n_notumor_train)
-    train_labels[n_meningiomas_train:] = 1
-    test_labels = np.zeros(n_meningiomas_test + n_notumor_test)
-    test_labels[n_meningiomas_test:] = 1
-    train_labels = train_labels.astype('uint8')
-    test_labels = test_labels.astype('uint8')
-
-    # Load train set
-    train_data = [cv2.imread(file) for file in glob.glob(path_train + 'meningioma/*.jpg')]
-    train_data.extend(cv2.imread(file) for file in glob.glob(path_train + 'notumor/*.jpg'))
-
-    # Load test set
-    test_data = [cv2.imread(file) for file in glob.glob(path_test + '/meningioma/*.jpg')]
-    test_data.extend(cv2.imread(file) for file in glob.glob(path_test + '/notumor/*.jpg'))
+    test_data = [cv2.imread(file) for file in glob.glob(path_test + '/notumor/*.jpg')]
+    test_data.extend(cv2.imread(file) for file in glob.glob(path_test + '/meningioma/*.jpg'))
 
     return train_data, train_labels, test_data, test_labels
 
@@ -210,7 +179,7 @@ def plot_filters_single_channel_big(t,model_name):
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
     fig_string = f"./models_trained/images/{model_name}_SingleChannelBig_{dt_string}.png"
     fig.savefig(fig_string)
-    plt.close()
+    plt.close(fig)
 
 
 def plot_filters_single_channel(t,model_name):
@@ -395,7 +364,7 @@ def get_std(data: list[np.ndarray], ratio: float) -> str:
     return df_name
 
 
-def normalization(data: list[np.ndarray], ratio: float = 1.0):
+def normalization_aug(data: list[np.ndarray], ratio: float = 1.0):
     RGB_mean_path = get_mean(data, ratio)
     RGB_mean_df = pd.read_csv(RGB_mean_path)
     print("Red ch mean = ", RGB_mean_df.iloc[0].R_MEAN.item(), "\nGreen ch mean = ", RGB_mean_df.iloc[0].G_MEAN.item(),
@@ -425,7 +394,7 @@ def normalization(data: list[np.ndarray], ratio: float = 1.0):
 
     return data_transform
 
-def normalization2(data: list[np.ndarray], ratio: float = 1.0):
+def normalization(data: list[np.ndarray], ratio: float = 1.0):
     RGB_mean_path = get_mean(data, ratio)
     RGB_mean_df = pd.read_csv(RGB_mean_path)
     print("Red ch mean = ", RGB_mean_df.iloc[0].R_MEAN.item(), "\nGreen ch mean = ", RGB_mean_df.iloc[0].G_MEAN.item(),
@@ -448,59 +417,6 @@ def normalization2(data: list[np.ndarray], ratio: float = 1.0):
         Resize(size=(128, 128)),
         ToTensor(),
         Normalize(mean=[R_MEAN, G_MEAN, B_MEAN], std=[R_STD, G_STD, B_STD])
-    ])
-
-    return data_transform
-
-###### TEST: changing normalization and adding data augmentation
-def newnormalization(data: list[np.ndarray], ratio: float = 1.0):     
-    mean_list = []
-    for i in range(0, len(data)):
-        img_np = data[i]
-        mean_im = np.mean(img_np)
-        mean_list.append(mean_im)
-    mean_image = np.mean(mean_list) / 255
-
-    std_list = []
-    for i in range(0, len(data)):
-        img_np = data[i]
-        std_im = np.std(img_np)
-        std_list.append(std_im)
-    std_image = np.mean(std_list) / 255
-
-    data_transform = Compose([
-        ToPILImage(),
-        Resize(size=(128, 128)),
-        ToTensor(),
-        Normalize(mean=mean_image, std=std_image),
-        RandomAffine(degrees=0, translate=(0.2, 0.2)),
-        RandomRotation(degrees=(0, 90)), 
-        RandomHorizontalFlip(p=0.1),
-        RandomVerticalFlip(p=0.1),
-    ])
-
-    return data_transform
-
-def newnormalization2(data: list[np.ndarray], ratio: float = 1.0):     
-    mean_list = []
-    for i in range(0, len(data)):
-        img_np = data[i]
-        mean_im = np.mean(img_np)
-        mean_list.append(mean_im)
-    mean_image = np.mean(mean_list) / 255
-
-    std_list = []
-    for i in range(0, len(data)):
-        img_np = data[i]
-        std_im = np.std(img_np)
-        std_list.append(std_im)
-    std_image = np.mean(std_list) / 255
-
-    data_transform = Compose([
-        ToPILImage(),
-        Resize(size=(128, 128)),
-        ToTensor(),
-        Normalize(mean=mean_image, std=std_image)
     ])
 
     return data_transform
@@ -647,10 +563,10 @@ def filter_extraction(model, model_name, image, single_channel, first=True):
     fig.savefig(f1_string)
     plt.close(fig)
 
-    if first==False:
-        visTensor(model_weights[1], model_name, ch=0, allkernels=True)
-    else:
+    if first:
         visTensor(model_weights[0], model_name, ch=0, allkernels=True)
+    else:
+        visTensor(model_weights[1], model_name, ch=0, allkernels=True)
 
     plot_weights(model_children[0], single_channel = single_channel, collated = False, model_name = model_name)
 
