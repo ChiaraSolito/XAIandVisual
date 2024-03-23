@@ -157,7 +157,7 @@ def train(model: torch.nn.Module,
     return results
 
 
-def training_main(data_transform, data_transform2, train_data, train_labels, base_model: str, num_epochs, num_fold):
+def training_main(data_transform_train, data_transform_val, train_data, train_labels, base_model: str, num_epochs, num_fold):
     global app_model, lr
 
     new_train_data = train_data * 3
@@ -196,9 +196,9 @@ def training_main(data_transform, data_transform2, train_data, train_labels, bas
         model = app_model
         optimizer = torch.optim.Adam(model.parameters(), lr=lr)
         train_data_fold = CustomDataset([new_train_data[x] for x in train_idx[i]], [new_train_labels[x] for x in train_idx[i]],
-                                        transform=data_transform)
+                                        transform=data_transform_train)
         val_data_fold = CustomDataset([new_train_data[x] for x in val_idx[i]], [new_train_labels[x] for x in val_idx[i]],
-                                      transform=data_transform2)
+                                      transform=data_transform_val)
 
         trainloader = DataLoader(train_data_fold, batch_size=64, shuffle=True)
         validationloader = DataLoader(val_data_fold, batch_size=64, shuffle=True)
