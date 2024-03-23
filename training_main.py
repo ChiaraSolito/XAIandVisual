@@ -261,7 +261,7 @@ def test(data_transform, test_data, test_labels, model, model_name, device, rati
             pred_label = y_pred.argmax(dim=1)
             pred_labels = torch.cat((pred_labels, pred_label), 0)
     pred = torch.cat([pred_labels[1:]])
-    acc, f1_score = compute_metrics(test_labels, pred, classes=['meningioma', 'notumor'], model_name=model_name,
+    acc, f1_score = compute_metrics(test_labels, pred, classes=['notumor', 'meningioma'], model_name=model_name,
                                     ratio=ratio)
 
     # dd/mm/YY H:M:S
