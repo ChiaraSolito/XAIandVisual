@@ -92,7 +92,7 @@ def compute_metrics(y_true, y_pred, classes, model_name, ratio: None):
 
     # Confusion matrix
     conf_mat = confusion_matrix(y_true, y_pred.numpy(), labels=list(range(0, len(classes))))
-    fig_metrics = plt.figure(figsize=(7, 5))
+    fig_metrics = plt.figure(figsize=(8, 5))
     disp = ConfusionMatrixDisplay(confusion_matrix=conf_mat, display_labels=classes)
     disp.plot()
     plt.title('confusion matrix: test set')
@@ -422,7 +422,7 @@ def normalization(data: list[np.ndarray], ratio: float = 1.0):
     return data_transform
 
 
-def plot_results(train_accuracies, val_accuracies, train_losses, val_losses, f1_scores, model_name, best_fold, show=False):
+def plot_results(train_accuracies, val_accuracies, train_losses, val_losses, train_f1_scores, val_f1_scores, model_name, best_fold, show=False):
 
     # PLOT - VALIDATION ACCURACY
     train_acc_matrix = np.array(train_accuracies)
@@ -438,8 +438,6 @@ def plot_results(train_accuracies, val_accuracies, train_losses, val_losses, f1_
 
     num_epochs = range(1, len(train_mean_acc)+1)
     fig, ax = plt.subplots(figsize=(20, 10))
-    #for idx, fold_acc in enumerate(acc_matrix):
-        #ax.plot(num_epochs, fold_acc, '--', alpha=0.5, label=f"Fold n.{idx}")
     ax.fill_between(num_epochs, train_mean_acc - train_acc_std, train_mean_acc + train_acc_std, color="red", alpha=0.2)
     ax.plot(num_epochs, train_mean_acc, '-', color="red", label='Training Mean Accuracy')
     ax.plot(num_epochs, train_best_acc, '--', color="red", label='Best fold Training Accuracy')
@@ -452,6 +450,8 @@ def plot_results(train_accuracies, val_accuracies, train_losses, val_losses, f1_
     plt.xticks(np.arange(1, len(num_epochs)+1, step=1), fontsize=20)
     plt.xlim(1, len(num_epochs))
     plt.ylim([min(train_acc_min) - 0.08, 1.0])
+    plt.xlabel("Epochs", fontsize=20)
+    plt.ylabel("Accuracy", fontsize=20)
     plt.grid(True)
     plt.legend(fontsize=20,loc='lower right', frameon=True, facecolor='lightgray')
     plt.title("Accuracy Between Folds -Training and Validation", fontsize=30)
@@ -486,10 +486,12 @@ def plot_results(train_accuracies, val_accuracies, train_losses, val_losses, f1_
     plt.yticks(fontsize=20)
     plt.xticks(np.arange(1, len(num_epochs)+1, step=1),fontsize=20)
     plt.xlim(1, len(num_epochs))
-    plt.ylim([0.0, max(train_max) + 0.15])
+    plt.ylim([0.0, max(train_max) + 0.2])
+    plt.xlabel("Epochs", fontsize=20)
+    plt.ylabel("Loss", fontsize=20)
     plt.grid(True)
     plt.legend(fontsize=20,loc='upper left', frameon=True, facecolor='lightgray')
-    plt.title("Learning Curves - Training and Validation", fontsize=30)
+    plt.title("Learning Curves across Folds - Training and Validation", fontsize=30)
     if show:
         plt.show()
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
@@ -498,25 +500,36 @@ def plot_results(train_accuracies, val_accuracies, train_losses, val_losses, f1_
     plt.close()
 
     # PLOT - F1
-    f1_matrix = np.array(f1_scores)
-    f1_min = np.min(f1_matrix, axis=0)
-    f1_std = np.std(f1_matrix, axis=0)
-    mean_f1 = np.mean(f1_matrix, axis=0)
-    best_f1 = f1_matrix[best_fold, :]
+    train_f1_matrix = np.array(train_f1_scores)
+    train_f1_min = np.min(train_f1_matrix, axis=0)
+    train_f1_std = np.std(train_f1_matrix, axis=0)
+    train_mean_f1 = np.mean(train_f1_matrix, axis=0)
+    train_best_f1 = train_f1_matrix[best_fold, :]
+
+    val_f1_matrix = np.array(val_f1_scores)
+    val_f1_min = np.min(val_f1_matrix, axis=0)
+    val_f1_std = np.std(val_f1_matrix, axis=0)
+    val_mean_f1 = np.mean(val_f1_matrix, axis=0)
+    val_best_f1 = val_f1_matrix[best_fold, :]
 
     fig, ax = plt.subplots(figsize=(20, 10))
-    for idx, fold_f1 in enumerate(f1_matrix):
-        ax.plot(num_epochs, fold_f1, '--', alpha=0.5, label=f"Fold n.{idx}")
-    ax.fill_between(num_epochs, mean_f1 - f1_std, mean_f1 + f1_std, color="grey", alpha=0.2)
-    ax.plot(num_epochs, mean_f1, '-', color="red", label='Mean F1 Score between Folds')
-    ax.plot(num_epochs, best_f1, '--', color="blue", label='Best fold F1 Score')
+    ax.plot(num_epochs, train_mean_f1, '-', color="red", label='Training Mean F1')
+    ax.plot(num_epochs, train_best_f1, '--', color="red", label='Best fold Training F1')
+    ax.fill_between(num_epochs, train_mean_f1 - train_f1_std, train_mean_f1 + train_f1_std, color="red", alpha=0.2)
+
+    ax.plot(num_epochs, val_mean_f1, '-', color="blue", label='Validation Mean F1')
+    ax.plot(num_epochs, val_best_f1, '--', color="blue", label='Best fold Validation F1')
+    ax.fill_between(num_epochs, val_mean_f1 - val_f1_std, val_mean_f1 + val_f1_std, color="blue", alpha=0.2)
+
     plt.yticks(fontsize=20)
     plt.xticks(np.arange(1, len(num_epochs)+1, step=1),fontsize=20)
     plt.xlim(1, len(num_epochs))
-    plt.ylim([min(f1_min) - 0.1, 1.0])
+    plt.ylim([min(train_f1_min) - 0.1, 1.0])
+    plt.xlabel("Epochs", fontsize=20)
+    plt.ylabel("F1 Score", fontsize=20)
     plt.grid(True)
-    plt.legend(ncol=3,fontsize=20,loc='lower right', frameon=True, facecolor='lightgray')
-    plt.title("Validation F1 Score Between Folds", fontsize=30)
+    plt.legend(fontsize=20,loc='lower right', frameon=True, facecolor='lightgray')
+    plt.title("F1 Score across Folds - Training and Validation", fontsize=30)
     if show:
         plt.show()
     dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")

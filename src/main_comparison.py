@@ -73,14 +73,13 @@ if __name__ == "__main__":
     print('*********************')
 
     try:
-
         results = {'CNN': cnn_accuracies,
                    'ScatNet': scatnet_accuracies }
         results_df = pd.DataFrame.from_dict(results)
         results_df_name = f"./csv/accuracy_comparison.csv"
         results_df.to_csv(results_df_name)
     except Exception as e:
-        print(f'AHI AHI AHI' + str(e))
+        print(f'Error ' + str(e))
 
     # Plot the results
     plt.plot(subset_ratios[::-1], cnn_accuracies[::-1], label='CNN', color='blue')
