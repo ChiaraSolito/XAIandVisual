@@ -3,11 +3,7 @@ data/test_complete/*
 data/train/*
 data/train_complete/*
 venv/*
-csv/CNN/*.csv
-csv/ScatNet/*.csv
 __pycache__/
 models_trained/CNN/*.pth
 models_trained/ScatNet/*.pth
-models_trained/*.png
-csv/norm/*
 RESULTS_RIGHE
