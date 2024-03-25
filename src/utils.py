@@ -599,6 +599,8 @@ def plot_statistics(plot1, plot2, plot3, name_image, suptitle, model_name):
     axes[1].set_title("IG vs LIME")
 
     axes[2].plot(plot1, plot3,".")
+    m, b = np.polyfit(plot1.flatten(), plot3.flatten(), 1)
+    axes[2].plot(plot1,  m*plot1+b,color='red')
     axes[2].set_xlabel(f"IG scratch {name_image}")
     axes[2].set_ylabel(f"IG captum {name_image}")
     axes[2].set_title("Scratch vs Captum IG")
