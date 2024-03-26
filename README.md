@@ -48,4 +48,4 @@ Before that, be sure to have everything present in the requirements.txt installe
 
 - [@ChiaraSolito](https://github.com/ChiaraSolito)
 - [@VirginiaFilippi](https://github.com/VirginiaFilippi)
-- [@Alberto Righetti](https://github.com/albertorighetti99)
+- [@AlbertoRighetti](https://github.com/albertorighetti99)
